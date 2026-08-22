@@ -362,13 +362,40 @@
   display: flex;
   flex-direction: column;
   position: relative;
-  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+  cursor: grab;
+  user-select: none;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.ytsnip-card:active {
+  cursor: grabbing;
 }
 
 .ytsnip-card:hover {
   transform: translateY(-2px);
   border-color: #555;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.ytsnip-card.ytsnip-dragging {
+  opacity: 0.35;
+  transform: scale(0.95);
+  border: 2px dashed #ff6b35 !important;
+  box-shadow: none;
+}
+
+.ytsnip-card.ytsnip-drag-over {
+  border-color: #00e676 !important;
+  box-shadow: 0 0 16px rgba(0, 230, 118, 0.45);
+  transform: translateY(-4px) scale(1.02);
+}
+
+.ytsnip-grip-dots {
+  display: inline-block;
+  margin-right: 2px;
+  opacity: 0.7;
+  font-size: 11px;
+  vertical-align: middle;
 }
 
 .ytsnip-card-preview {

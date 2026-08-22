@@ -345,10 +345,14 @@
       this.slides.forEach((slide, index) => {
         const card = document.createElement('div');
         card.className = 'ytsnip-card';
+        card.draggable = true;
+        card.dataset.index = index;
+        card.title = 'Drag to rearrange | Click preview to zoom';
+
         card.innerHTML = `
-          <div class="ytsnip-card-preview" title="Click to zoom in">
+          <div class="ytsnip-card-preview">
             <img class="ytsnip-card-img" src="${slide.dataUrl}" alt="Slide ${index + 1}" />
-            <span class="ytsnip-card-index">#${index + 1}</span>
+            <span class="ytsnip-card-index"><span class="ytsnip-grip-dots">⠿</span> #${index + 1}</span>
             <span class="ytsnip-card-time">${slide.formattedTime}</span>
           </div>
           <div class="ytsnip-card-actions">
@@ -367,9 +371,62 @@
           </div>
         `;
 
+        // --- Drag and Drop Reordering ---
+        card.addEventListener('dragstart', (e) => {
+          if (e.target.closest('.ytsnip-card-btn')) {
+            e.preventDefault();
+            return;
+          }
+          this._draggedIndex = index;
+          card.classList.add('ytsnip-dragging');
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', String(index));
+        });
+
+        card.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          if (this._draggedIndex !== null && this._draggedIndex !== index) {
+            card.classList.add('ytsnip-drag-over');
+          }
+        });
+
+        card.addEventListener('dragleave', () => {
+          card.classList.remove('ytsnip-drag-over');
+        });
+
+        card.addEventListener('drop', (e) => {
+          e.preventDefault();
+          card.classList.remove('ytsnip-drag-over');
+          const fromIndex = this._draggedIndex !== null ? this._draggedIndex : parseInt(e.dataTransfer.getData('text/plain'), 10);
+          const toIndex = index;
+
+          if (!isNaN(fromIndex) && fromIndex !== toIndex && fromIndex >= 0 && fromIndex < this.slides.length) {
+            const [movedSlide] = this.slides.splice(fromIndex, 1);
+            this.slides.splice(toIndex, 0, movedSlide);
+            this._saveSlides();
+            this._renderGrid();
+            this.showToast(`Slide moved to #${toIndex + 1}`);
+          }
+          this._draggedIndex = null;
+        });
+
+        card.addEventListener('dragend', () => {
+          this._draggedIndex = null;
+          card.classList.remove('ytsnip-dragging');
+          grid.querySelectorAll('.ytsnip-card').forEach(c => {
+            c.classList.remove('ytsnip-drag-over', 'ytsnip-dragging');
+          });
+        });
+
         // Preview click -> lightbox zoom
         const preview = card.querySelector('.ytsnip-card-preview');
-        preview.addEventListener('click', () => this._showLightbox(slide.dataUrl));
+        preview.addEventListener('click', (e) => {
+          // Only open lightbox if not dragging
+          if (!card.classList.contains('ytsnip-dragging')) {
+            this._showLightbox(slide.dataUrl);
+          }
+        });
 
         // Jump button
         const jumpBtn = card.querySelector('.ytsnip-card-btn-jump');
