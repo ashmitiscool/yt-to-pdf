@@ -194,11 +194,126 @@
     }
   }
 
+  /**
+   * Opens the browser print dialog with formatted slide deck pages.
+   * @param {Array<{dataUrl: string, timestamp: number, formattedTime: string}>} slides
+   * @param {string} title
+   * @returns {Promise<void>}
+   */
+  async function printSlides(slides, title = 'YouTube Presentation') {
+    if (!slides || slides.length === 0) {
+      throw new Error('No slides to print');
+    }
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.style.visibility = 'hidden';
+
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    const cleanTitle = sanitizeFilename(title);
+
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${cleanTitle} - Slides</title>
+        <style>
+          @page {
+            size: landscape;
+            margin: 0;
+          }
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          body {
+            background: #ffffff;
+            color: #000000;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+          }
+          .print-slide-page {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            page-break-after: always;
+            break-after: page;
+            padding: 8mm;
+            position: relative;
+          }
+          .print-slide-page:last-child {
+            page-break-after: auto;
+            break-after: auto;
+          }
+          .print-slide-img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 4px;
+          }
+          .print-slide-footer {
+            position: absolute;
+            bottom: 4mm;
+            right: 8mm;
+            font-size: 10px;
+            color: #888888;
+          }
+        </style>
+      </head>
+      <body>
+        ${slides.map((s, idx) => `
+          <div class="print-slide-page">
+            <img class="print-slide-img" src="${s.dataUrl}" alt="Slide ${idx + 1}" />
+            <div class="print-slide-footer">Slide ${idx + 1} (${s.formattedTime || '00:00'})</div>
+          </div>
+        `).join('')}
+      </body>
+      </html>
+    `);
+    doc.close();
+
+    // Wait for all slide images in iframe to finish loading
+    const images = doc.querySelectorAll('img');
+    const promises = Array.from(images).map(img => {
+      if (img.complete) return Promise.resolve();
+      return new Promise(resolve => {
+        img.onload = resolve;
+        img.onerror = resolve;
+      });
+    });
+
+    await Promise.all(promises);
+
+    // Let the renderer finish painting
+    await new Promise(r => setTimeout(r, 200));
+
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+
+    // Clean up iframe
+    setTimeout(() => {
+      if (iframe.parentNode) {
+        iframe.parentNode.removeChild(iframe);
+      }
+    }, 15000);
+  }
+
   const SlideExporter = {
     sanitizeFilename,
     exportToPPTX,
     exportToPDF,
     exportToZIP,
+    printSlides,
     copySlideToClipboard
   };
 

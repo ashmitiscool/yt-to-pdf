@@ -14,6 +14,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnDrawer = document.getElementById('btn-drawer');
   const btnExportPptx = document.getElementById('btn-export-pptx');
   const btnExportPdf = document.getElementById('btn-export-pdf');
+  const btnExportPrint = document.getElementById('btn-export-print');
+  const btnExportZip = document.getElementById('btn-export-zip');
 
   let activeTab = null;
 
@@ -48,6 +50,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       btnDrawer.disabled = true;
       btnExportPptx.disabled = true;
       btnExportPdf.disabled = true;
+      btnExportPrint.disabled = true;
+      btnExportZip.disabled = true;
       return;
     }
 
@@ -66,6 +70,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       btnDrawer.disabled = false;
       btnExportPptx.disabled = res.slidesCount === 0;
       btnExportPdf.disabled = res.slidesCount === 0;
+      btnExportPrint.disabled = res.slidesCount === 0;
+      btnExportZip.disabled = res.slidesCount === 0;
     } else {
       statusPill.className = 'status-pill status-offline';
       statusPill.textContent = 'Connecting...';
@@ -81,6 +87,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       statSlideCount.textContent = res.count;
       btnExportPptx.disabled = res.count === 0;
       btnExportPdf.disabled = res.count === 0;
+      btnExportPrint.disabled = res.count === 0;
+      btnExportZip.disabled = res.count === 0;
     }
   });
 
@@ -104,6 +112,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Export PDF
   btnExportPdf.addEventListener('click', async () => {
     await sendMessageToTab({ action: 'EXPORT_DECK', exportType: 'pdf' });
+  });
+
+  // Print Slides
+  btnExportPrint.addEventListener('click', async () => {
+    await sendMessageToTab({ action: 'EXPORT_DECK', exportType: 'print' });
+    window.close();
+  });
+
+  // Export ZIP
+  btnExportZip.addEventListener('click', async () => {
+    await sendMessageToTab({ action: 'EXPORT_DECK', exportType: 'zip' });
   });
 
   await updateStatus();

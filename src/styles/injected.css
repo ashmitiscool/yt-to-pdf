@@ -557,6 +557,15 @@
   background: #e6002e;
 }
 
+.ytsnip-export-print {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.ytsnip-export-print:hover {
+  background: #1d4ed8;
+}
+
 .ytsnip-export-zip {
   background: #2a2a2a;
   color: #d0d0d0;

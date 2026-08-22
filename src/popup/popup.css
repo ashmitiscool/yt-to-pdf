@@ -267,6 +267,17 @@ body {
   color: #ffffff;
 }
 
+.btn-print {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.btn-zip {
+  background: #2a2a2a;
+  color: #d0d0d0;
+  border: 1px solid #3a3a3a;
+}
+
 /* Footer */
 .footer {
   border-top: 1px solid #222;

@@ -17,6 +17,7 @@
     check: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
     pptx: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>`,
     pdf: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="9" y1="15" x2="15" y2="15"></line></svg>`,
+    print: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>`,
     zip: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>`
   };
 
@@ -114,6 +115,9 @@
             </button>
           </div>
           <div class="ytsnip-export-row">
+            <button class="ytsnip-export-btn ytsnip-export-print" id="ytsnip-export-print">
+              ${ICONS.print} Print Slides
+            </button>
             <button class="ytsnip-export-btn ytsnip-export-zip" id="ytsnip-export-zip">
               ${ICONS.zip} Images (.zip)
             </button>
@@ -164,6 +168,9 @@
 
       const exportPdfBtn = this.drawerEl.querySelector('#ytsnip-export-pdf');
       exportPdfBtn.addEventListener('click', () => this.exportDeck('pdf'));
+
+      const exportPrintBtn = this.drawerEl.querySelector('#ytsnip-export-print');
+      exportPrintBtn.addEventListener('click', () => this.exportDeck('print'));
 
       const exportZipBtn = this.drawerEl.querySelector('#ytsnip-export-zip');
       exportZipBtn.addEventListener('click', () => this.exportDeck('zip'));
@@ -496,10 +503,14 @@
           await exporter.exportToPPTX(this.slides, title);
         } else if (type === 'pdf') {
           await exporter.exportToPDF(this.slides, title);
+        } else if (type === 'print') {
+          await exporter.printSlides(this.slides, title);
         } else if (type === 'zip') {
           await exporter.exportToZIP(this.slides, title);
         }
-        this.showToast(`${type.toUpperCase()} exported successfully!`);
+        if (type !== 'print') {
+          this.showToast(`${type.toUpperCase()} exported successfully!`);
+        }
       } catch (err) {
         console.error('Export error:', err);
         this.showToast(`Export failed: ${err.message}`);
