@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YT SlideSnip</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo-group">
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+          <line x1="8" y1="21" x2="16" y2="21"></line>
+          <line x1="12" y1="17" x2="12" y2="21"></line>
+        </svg>
+        <span class="app-name">YT SlideSnip</span>
+      </div>
+      <span class="status-pill status-ready" id="status-pill">Ready</span>
+    </header>
+
+    <!-- Video Info Card -->
+    <div class="card video-card" id="video-card">
+      <div class="video-icon-wrap">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+        </svg>
+      </div>
+      <div class="video-meta">
+        <div class="video-title" id="video-title">Detecting YouTube video...</div>
+        <div class="video-subtitle" id="video-subtitle">Open a YouTube presentation video</div>
+      </div>
+    </div>
+
+    <!-- Active Deck Stats -->
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-num" id="stat-slide-count">0</div>
+        <div class="stat-label">Slides in Deck</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num" id="stat-scan-status">Idle</div>
+        <div class="stat-label">Scanner Status</div>
+      </div>
+    </div>
+
+    <!-- Primary Action Buttons -->
+    <div class="action-section">
+      <button class="btn btn-primary" id="btn-snap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+          <circle cx="12" cy="13" r="4"></circle>
+        </svg>
+        <span>Snap Current Slide</span>
+        <span class="btn-shortcut">Alt+S</span>
+      </button>
+
+      <button class="btn btn-secondary" id="btn-autoscan">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        </svg>
+        <span>Auto-Scan All Slides</span>
+        <span class="btn-shortcut">Alt+A</span>
+      </button>
+
+      <button class="btn btn-dark" id="btn-drawer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+          <line x1="8" y1="21" x2="16" y2="21"></line>
+          <line x1="12" y1="17" x2="12" y2="21"></line>
+        </svg>
+        <span>Open Slide Deck Drawer</span>
+        <span class="btn-shortcut">Alt+D</span>
+      </button>
+    </div>
+
+    <!-- Export Section -->
+    <div class="section-title">Quick Export</div>
+    <div class="export-grid">
+      <button class="btn-export btn-pptx" id="btn-export-pptx">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="12" y1="18" x2="12" y2="12"></line>
+          <line x1="9" y1="15" x2="15" y2="15"></line>
+        </svg>
+        PowerPoint
+      </button>
+      <button class="btn-export btn-pdf" id="btn-export-pdf">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="9" y1="15" x2="15" y2="15"></line>
+        </svg>
+        PDF
+      </button>
+    </div>
+
+    <!-- Shortcuts Footer -->
+    <footer class="footer">
+      <div class="shortcuts-guide">
+        <span>💡 <strong>Alt+S</strong> Snap | <strong>Alt+A</strong> Scan | <strong>Alt+D</strong> Deck</span>
+      </div>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

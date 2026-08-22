@@ -1,0 +1,25 @@
+{
+  "name": "yt-to-ppt",
+  "version": "1.0.0",
+  "description": "Chrome Extension to extract slides from YouTube videos and export to PowerPoint (PPTX) and PDF",
+  "main": "src/background/background.js",
+  "scripts": {
+    "test": "node tests/detector.test.js"
+  },
+  "keywords": [
+    "youtube",
+    "slides",
+    "ppt",
+    "pptx",
+    "pdf",
+    "notes",
+    "chrome-extension"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "jspdf": "^4.2.1",
+    "jszip": "^3.10.1",
+    "pptxgenjs": "^4.0.1"
+  }
+}

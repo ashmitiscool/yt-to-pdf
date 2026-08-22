@@ -1,0 +1,60 @@
+{
+  "manifest_version": 3,
+  "name": "YT SlideSnip - YouTube to PPT & PDF",
+  "version": "1.0.0",
+  "description": "Extract presentation slides from YouTube videos and export them to PowerPoint (PPTX), PDF, or images with one click.",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "downloads",
+    "scripting"
+  ],
+  "host_permissions": [
+    "*://*.youtube.com/*"
+  ],
+  "background": {
+    "service_worker": "src/background/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.youtube.com/*"],
+      "js": [
+        "lib/jspdf.umd.min.js",
+        "lib/pptxgen.bundle.js",
+        "lib/jszip.min.js",
+        "src/content/detector.js",
+        "src/content/scanner.js",
+        "src/content/exporter.js",
+        "src/content/drawer.js",
+        "src/content/content.js"
+      ],
+      "css": [
+        "src/styles/injected.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/*",
+        "lib/*",
+        "src/styles/*"
+      ],
+      "matches": ["*://*.youtube.com/*"]
+    }
+  ]
+}

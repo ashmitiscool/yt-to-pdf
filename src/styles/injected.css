@@ -1,0 +1,510 @@
+/* YT SlideSnip - YouTube Injected Styles */
+
+/* In-Player Action Buttons in .ytp-right-controls */
+.ytsnip-yt-btn {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 100%;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  color: #fff;
+  fill: #fff;
+  opacity: 0.88;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  position: relative;
+  vertical-align: top;
+  box-sizing: border-box;
+}
+
+.ytsnip-yt-btn:hover {
+  opacity: 1;
+  transform: scale(1.08);
+}
+
+.ytsnip-yt-btn svg {
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+}
+
+.ytsnip-yt-badge {
+  position: absolute;
+  top: 6px;
+  right: 2px;
+  background: #ff0033;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 8px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* Toast Notifications on Video */
+.ytsnip-toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(18, 18, 18, 0.92);
+  color: #ffffff;
+  padding: 10px 18px;
+  border-radius: 24px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  z-index: 9999999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(8px);
+}
+
+.ytsnip-toast.ytsnip-toast-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.ytsnip-toast-icon {
+  width: 16px;
+  height: 16px;
+  color: #00e676;
+}
+
+/* Slide Deck Drawer Overlay */
+.ytsnip-drawer-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 9999990;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.ytsnip-drawer-backdrop.ytsnip-open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.ytsnip-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 480px;
+  max-width: 90vw;
+  height: 100vh;
+  background: #181818;
+  color: #f1f1f1;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.7);
+  z-index: 9999995;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  border-left: 1px solid #2e2e2e;
+}
+
+.ytsnip-drawer.ytsnip-open {
+  transform: translateX(0);
+}
+
+/* Header */
+.ytsnip-header {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #2a2a2a;
+  background: #1e1e1e;
+}
+
+.ytsnip-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ytsnip-logo-icon {
+  width: 24px;
+  height: 24px;
+  color: #ff0033;
+}
+
+.ytsnip-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+}
+
+.ytsnip-count-badge {
+  background: #ff0033;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.ytsnip-close-btn {
+  background: transparent;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ytsnip-close-btn:hover {
+  background: #333;
+  color: #fff;
+}
+
+/* Scan Bar & Status */
+.ytsnip-scan-banner {
+  background: #222;
+  padding: 12px 20px;
+  border-bottom: 1px solid #2a2a2a;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ytsnip-scan-banner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #bbb;
+}
+
+.ytsnip-progress-track {
+  width: 100%;
+  height: 6px;
+  background: #333;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.ytsnip-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #ff0033, #ff6b35);
+  border-radius: 3px;
+  transition: width 0.15s ease;
+}
+
+.ytsnip-scan-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.ytsnip-scan-btn {
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: opacity 0.15s;
+}
+
+.ytsnip-scan-btn-primary {
+  background: #ff0033;
+  color: #fff;
+}
+
+.ytsnip-scan-btn-danger {
+  background: #444;
+  color: #ff5252;
+}
+
+.ytsnip-scan-btn:hover {
+  opacity: 0.9;
+}
+
+/* Options Ribbon */
+.ytsnip-options-ribbon {
+  padding: 10px 20px;
+  background: #1a1a1a;
+  border-bottom: 1px solid #262626;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #888;
+}
+
+.ytsnip-select {
+  background: #282828;
+  color: #eee;
+  border: 1px solid #3c3c3c;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+}
+
+/* Slides Content Container */
+.ytsnip-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ytsnip-empty-state {
+  margin: auto;
+  text-align: center;
+  color: #777;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 10px;
+}
+
+.ytsnip-empty-icon {
+  width: 48px;
+  height: 48px;
+  color: #444;
+}
+
+/* Slide Cards Grid */
+.ytsnip-slides-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.ytsnip-card {
+  background: #242424;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+.ytsnip-card:hover {
+  transform: translateY(-2px);
+  border-color: #555;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.ytsnip-card-preview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #111;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.ytsnip-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.ytsnip-card-index {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.ytsnip-card-time {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  background: rgba(0, 0, 0, 0.85);
+  color: #00e676;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.ytsnip-card-actions {
+  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #1f1f1f;
+  border-top: 1px solid #2c2c2c;
+}
+
+.ytsnip-card-btn {
+  background: transparent;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, background 0.15s;
+}
+
+.ytsnip-card-btn:hover {
+  color: #fff;
+  background: #333;
+}
+
+.ytsnip-card-btn-delete:hover {
+  color: #ff5252;
+  background: rgba(255, 82, 82, 0.15);
+}
+
+.ytsnip-card-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Footer / Export Actions */
+.ytsnip-footer {
+  padding: 16px 20px;
+  background: #1e1e1e;
+  border-top: 1px solid #2a2a2a;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ytsnip-export-row {
+  display: flex;
+  gap: 10px;
+}
+
+.ytsnip-export-btn {
+  flex: 1;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.ytsnip-export-btn:active {
+  transform: scale(0.98);
+}
+
+.ytsnip-export-pptx {
+  background: #ff6b35;
+  color: #ffffff;
+}
+
+.ytsnip-export-pptx:hover {
+  background: #f85b20;
+}
+
+.ytsnip-export-pdf {
+  background: #ff0033;
+  color: #ffffff;
+}
+
+.ytsnip-export-pdf:hover {
+  background: #e6002e;
+}
+
+.ytsnip-export-zip {
+  background: #333333;
+  color: #e0e0e0;
+}
+
+.ytsnip-export-zip:hover {
+  background: #444444;
+  color: #ffffff;
+}
+
+.ytsnip-footer-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  padding-top: 4px;
+}
+
+.ytsnip-btn-link {
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  transition: color 0.15s;
+}
+
+.ytsnip-btn-link:hover {
+  color: #ff5252;
+}
+
+/* Lightbox Modal for Zoomed Slide Preview */
+.ytsnip-lightbox {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 9999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  cursor: zoom-out;
+}
+
+.ytsnip-lightbox img {
+  max-width: 95%;
+  max-height: 90vh;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+  border: 1px solid #333;
+}
