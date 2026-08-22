@@ -26,7 +26,7 @@
       this.videoTitle = 'YouTube Presentation';
       this.isOpen = false;
       this.sensitivity = 'medium';
-      this.scanInterval = 3;
+      this.scanInterval = 2;
 
       this.callbacks = {
         onStartScan: () => {},

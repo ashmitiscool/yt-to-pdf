@@ -142,4 +142,34 @@ console.log('=== Running SlideDetector Tests ===\n');
   console.log('✔ Test 5 Passed: Major content addition detected');
 }
 
+// Test 6: Subtle slide change on same white presentation template (e.g., text/equations step)
+{
+  const slidePage1 = createSyntheticFrame(320, 180, (x, y, w, h) => {
+    if (y < h * 0.15) return [20, 50, 120]; // Header
+    // 2 bullet points
+    if (y >= 40 && y <= 50 && x >= 30 && x <= 220) return [30, 30, 30];
+    if (y >= 65 && y <= 75 && x >= 30 && x <= 200) return [30, 30, 30];
+    return [255, 255, 255]; // White background
+  });
+
+  const slidePage2 = createSyntheticFrame(320, 180, (x, y, w, h) => {
+    if (y < h * 0.15) return [20, 50, 120]; // Header
+    // New equation line and table on slide page 2
+    if (y >= 40 && y <= 50 && x >= 30 && x <= 260) return [30, 30, 30];
+    if (y >= 65 && y <= 75 && x >= 30 && x <= 280) return [30, 30, 30];
+    if (y >= 90 && y <= 100 && x >= 30 && x <= 240) return [30, 30, 30];
+    if (y >= 115 && y <= 145 && x >= 30 && x <= 200) return [200, 220, 240];
+    return [255, 255, 255];
+  });
+
+  const feat1 = SlideDetector.extractFrameFeatures(slidePage1);
+  const feat2 = SlideDetector.extractFrameFeatures(slidePage2);
+
+  const res = SlideDetector.isSlideTransition(feat1, feat2, { sensitivity: 'medium' });
+  console.log(`  Subtle slide page test: Hamming=${res.hamming}, BlockDiff=${res.blockDiff.toFixed(2)}%, ChangedBlocks=${res.changedBlocksCount}, isTransition=${res.isTransition}`);
+  assert.strictEqual(res.isTransition, true, 'Subtle slide transition on same template must be detected');
+  console.log('✔ Test 6 Passed: Subtle slide transition reliably detected');
+}
+
 console.log('\n✅ All Detector tests passed successfully!');
+

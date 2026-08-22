@@ -167,7 +167,7 @@
 
     scanner.startScan({
       videoElement: video,
-      stepSeconds: options.stepSeconds || 3,
+      stepSeconds: options.stepSeconds || 2,
       sensitivity: options.sensitivity || drawer.sensitivity || 'medium',
       onProgress: (progress) => {
         drawer.updateScanProgress(progress);

@@ -1,7 +1,8 @@
 /**
  * YT SlideSnip - Detector Engine
  * High-performance frame hashing, perceptual difference, and slide transition detection.
- * Designed to filter out cursor movements, laser pointers, and video noise.
+ * Designed to capture subtle slide changes (new text, bullet points, diagrams)
+ * while filtering out small cursor movements, laser pointers, and video noise.
  */
 
 (function (global) {
@@ -33,7 +34,6 @@
     } else if (source && source.data && source.width === 9 && source.height === 8) {
       sampleData = source.data;
     } else if (source && source.data) {
-      // Downsample manually if source is an arbitrary ImageData
       sampleData = downsampleImageData(source, 9, 8);
     } else {
       throw new Error('Invalid source for computeDHash');
@@ -105,26 +105,49 @@
   }
 
   /**
-   * Computes a 16x9 block color grid and compares block variance.
+   * Analyzes block-level color variance across a 16x9 grid (144 blocks).
+   * Calculates overall average difference, maximum single-block difference,
+   * and count of actively changed blocks.
+   *
    * @param {Uint8ClampedArray} sampleA 16x9x4 RGBA
    * @param {Uint8ClampedArray} sampleB 16x9x4 RGBA
-   * @returns {number} Percentage difference (0 to 100)
+   * @returns {{ avgDiff: number, maxBlockDiff: number, changedBlocksCount: number }}
    */
-  function computeBlockDifference(sampleA, sampleB) {
-    if (!sampleA || !sampleB || sampleA.length !== sampleB.length) return 100;
+  function analyzeBlockDifference(sampleA, sampleB) {
+    if (!sampleA || !sampleB || sampleA.length !== sampleB.length) {
+      return { avgDiff: 100, maxBlockDiff: 100, changedBlocksCount: 144 };
+    }
 
     let totalDiff = 0;
-    const totalPixels = sampleA.length / 4;
+    let maxBlockDiff = 0;
+    let changedBlocksCount = 0;
+    const totalBlocks = sampleA.length / 4; // 144 blocks
 
     for (let i = 0; i < sampleA.length; i += 4) {
       const rDiff = Math.abs(sampleA[i] - sampleB[i]);
       const gDiff = Math.abs(sampleA[i + 1] - sampleB[i + 1]);
       const bDiff = Math.abs(sampleA[i + 2] - sampleB[i + 2]);
 
-      totalDiff += (rDiff + gDiff + bDiff) / (3 * 255);
+      const blockPercent = ((rDiff + gDiff + bDiff) / (3 * 255)) * 100;
+      totalDiff += blockPercent;
+
+      if (blockPercent > maxBlockDiff) {
+        maxBlockDiff = blockPercent;
+      }
+
+      // If a block changes by more than 2.5%, count it as an active changed region
+      if (blockPercent >= 2.5) {
+        changedBlocksCount++;
+      }
     }
 
-    return (totalDiff / totalPixels) * 100;
+    const avgDiff = totalDiff / totalBlocks;
+
+    return {
+      avgDiff,
+      maxBlockDiff,
+      changedBlocksCount
+    };
   }
 
   /**
@@ -159,45 +182,57 @@
    * Determines if the current frame represents a genuine slide transition.
    * 
    * Sensitivity presets:
-   * - 'high' (more sensitive, captures subtle diagram steps): hammingThreshold = 4, blockDiffThreshold = 5%
-   * - 'medium' (balanced, default): hammingThreshold = 6, blockDiffThreshold = 8%
-   * - 'low' (strict, only major slide changes): hammingThreshold = 9, blockDiffThreshold = 12%
+   * - 'high' (Very responsive to subtle notes/text steps):
+   *     avgDiff >= 1.2% OR (hamming >= 2 && changedBlocksCount >= 2) OR changedBlocksCount >= 3
+   * - 'medium' (Balanced, default for lectures & study presentations):
+   *     avgDiff >= 2.0% OR (hamming >= 3 && changedBlocksCount >= 2) OR changedBlocksCount >= 4
+   * - 'low' (Strict, only major slide template changes):
+   *     avgDiff >= 5.0% OR (hamming >= 6 && changedBlocksCount >= 6)
    *
    * @param {Object} prevFeatures Output of extractFrameFeatures
    * @param {Object} currFeatures Output of extractFrameFeatures
    * @param {Object} [options]
-   * @returns {{isTransition: boolean, hamming: number, blockDiff: number}}
+   * @returns {{isTransition: boolean, hamming: number, blockDiff: number, changedBlocksCount: number}}
    */
   function isSlideTransition(prevFeatures, currFeatures, options = {}) {
     if (!prevFeatures || !currFeatures) {
-      return { isTransition: true, hamming: 64, blockDiff: 100 };
+      return { isTransition: true, hamming: 64, blockDiff: 100, changedBlocksCount: 144 };
     }
 
     const sensitivity = options.sensitivity || 'medium';
-    let hammingThreshold = 6;
-    let blockDiffThreshold = 8.0;
+    const hamming = hammingDistance(prevFeatures.dHash, currFeatures.dHash);
+    const blockAnalysis = analyzeBlockDifference(prevFeatures.blockData, currFeatures.blockData);
+    const { avgDiff, changedBlocksCount } = blockAnalysis;
+
+    let isTransition = false;
 
     if (sensitivity === 'high') {
-      hammingThreshold = 4;
-      blockDiffThreshold = 5.0;
+      // High sensitivity: catches single line bullet additions, small diagrams
+      if (avgDiff >= 1.2 || (hamming >= 2 && changedBlocksCount >= 2) || changedBlocksCount >= 3) {
+        isTransition = true;
+      }
     } else if (sensitivity === 'low') {
-      hammingThreshold = 9;
-      blockDiffThreshold = 12.0;
-    } else if (typeof options.customThreshold === 'number') {
-      blockDiffThreshold = options.customThreshold;
-      hammingThreshold = Math.max(3, Math.round(blockDiffThreshold * 0.75));
+      // Low sensitivity: only major visual redesigns
+      if (avgDiff >= 4.5 || (hamming >= 6 && changedBlocksCount >= 6) || changedBlocksCount >= 10) {
+        isTransition = true;
+      }
+    } else {
+      // Balanced (Medium - Default): catches all standard slide and text changes while ignoring mouse cursors
+      if (avgDiff >= 2.0 || (hamming >= 3 && changedBlocksCount >= 2) || (hamming >= 2 && avgDiff >= 1.5) || changedBlocksCount >= 4) {
+        isTransition = true;
+      }
     }
 
-    const hamming = hammingDistance(prevFeatures.dHash, currFeatures.dHash);
-    const blockDiff = computeBlockDifference(prevFeatures.blockData, currFeatures.blockData);
-
-    // If both dHash and block difference exceed thresholds, or block difference is substantial
-    const isTransition = (hamming >= hammingThreshold && blockDiff >= (blockDiffThreshold * 0.7)) || (blockDiff >= blockDiffThreshold);
+    // Safety filter: If only 1 single block changed and total difference is tiny (<0.8%), it's a cursor / noise
+    if (changedBlocksCount <= 1 && avgDiff < 0.8 && hamming <= 1) {
+      isTransition = false;
+    }
 
     return {
       isTransition,
       hamming,
-      blockDiff
+      blockDiff: avgDiff,
+      changedBlocksCount
     };
   }
 
@@ -206,7 +241,8 @@
     computeDHash,
     hammingDistance,
     downsampleImageData,
-    computeBlockDifference,
+    analyzeBlockDifference,
+    computeBlockDifference: (a, b) => analyzeBlockDifference(a, b).avgDiff,
     extractFrameFeatures,
     isSlideTransition
   };

@@ -96,7 +96,7 @@
      */
     async startScan({
       videoElement,
-      stepSeconds = 3,
+      stepSeconds = 2,
       sensitivity = 'medium',
       cropRect = null,
       startFrom = 0,
@@ -159,6 +159,8 @@
 
           // Seek to time
           await this._seekVideo(video, currentTime);
+          // Wait briefly for video decoder to paint frame
+          await new Promise((r) => setTimeout(r, 80));
 
           // Extract frame features
           const currentFeatures = detector.extractFrameFeatures(video);
@@ -170,16 +172,13 @@
             shouldCapture = true;
           } else {
             const comparison = detector.isSlideTransition(lastSlideFeatures, currentFeatures, { sensitivity });
-            // Require minimum 2 seconds spacing between detected slides to avoid transition artifacting
-            if (comparison.isTransition && (currentTime - lastSlideTime >= 2.0)) {
+            // Require minimum 1 second spacing between detected slides
+            if (comparison.isTransition && (currentTime - lastSlideTime >= 1.0)) {
               shouldCapture = true;
             }
           }
 
           if (shouldCapture) {
-            // Small settling delay (100ms) to ensure video frame decoder produces crisp un-blurred frame
-            await new Promise((r) => setTimeout(r, 100));
-
             const frame = captureVideoFrame(video, cropRect);
             const slideId = 'slide_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
             const slide = {
