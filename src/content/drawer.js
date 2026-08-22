@@ -11,7 +11,8 @@
     deck: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>`,
     close: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
     trash: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`,
-    copy: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`,
+    duplicate: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`,
+    copy: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>`,
     play: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`,
     check: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
     pptx: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>`,
@@ -267,6 +268,22 @@
       this._renderGrid();
     }
 
+    duplicateSlide(slideId) {
+      const index = this.slides.findIndex(s => s.id === slideId);
+      if (index === -1) return;
+      const original = this.slides[index];
+      const clone = {
+        ...original,
+        id: 'slide_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        timestamp: original.timestamp + 0.001
+      };
+      // Insert immediately after the duplicated slide
+      this.slides.splice(index + 1, 0, clone);
+      this._saveSlides();
+      this._renderGrid();
+      this.showToast(`Slide #${index + 1} duplicated!`);
+    }
+
     clearAll() {
       this.slides = [];
       this._saveSlides();
@@ -338,6 +355,9 @@
             <button class="ytsnip-card-btn ytsnip-card-btn-jump" title="Jump to ${slide.formattedTime} in video">
               ${ICONS.play}
             </button>
+            <button class="ytsnip-card-btn ytsnip-card-btn-duplicate" title="Duplicate this slide">
+              ${ICONS.duplicate}
+            </button>
             <button class="ytsnip-card-btn ytsnip-card-btn-copy" title="Copy slide image to clipboard">
               ${ICONS.copy}
             </button>
@@ -357,6 +377,13 @@
           e.stopPropagation();
           this.callbacks.onSeekVideo(slide.timestamp);
           this.showToast(`Jumped to ${slide.formattedTime}`);
+        });
+
+        // Duplicate button
+        const dupBtn = card.querySelector('.ytsnip-card-btn-duplicate');
+        dupBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.duplicateSlide(slide.id);
         });
 
         // Copy button

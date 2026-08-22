@@ -440,6 +440,21 @@
   background: #333;
 }
 
+.ytsnip-card-btn-jump:hover {
+  color: #00e676;
+  background: rgba(0, 230, 118, 0.15);
+}
+
+.ytsnip-card-btn-duplicate:hover {
+  color: #ff9800;
+  background: rgba(255, 152, 0, 0.15);
+}
+
+.ytsnip-card-btn-copy:hover {
+  color: #40c4ff;
+  background: rgba(64, 196, 255, 0.15);
+}
+
 .ytsnip-card-btn-delete:hover {
   color: #ff5252;
   background: rgba(255, 82, 82, 0.15);
