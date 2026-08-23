@@ -1,9 +1,8 @@
 # 📄 YT to PDF - YouTube Slides to PDF & PPT Converter
 
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary%20%2F%20Closed--Source-red.svg)](LICENSE)
 [![Chrome Web Store](https://img.shields.io/badge/Chrome_Web_Store-YT_to_PDF-4285F4?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/)
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-success?logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/extensions/develop/migrate/manifest-v3)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 **YT to PDF** is a lightweight, privacy-focused Chrome Extension that extracts presentation slides directly from YouTube videos and converts them into **PDF documents**, **PowerPoint (`.pptx`) presentations**, or **high-resolution image archives** with a single click.
 
@@ -41,9 +40,9 @@ Whether you're studying online university lectures, watching tech conferences, o
 
 ---
 
-### Method 2: Manual / Developer Installation (From Source)
+### Method 2: Local / Developer Setup (Evaluation Only)
 
-If you wish to run the extension from source or contribute to development:
+If you are evaluating the codebase locally or running tests for portfolio / demonstration review:
 
 1. **Clone the repository**:
    ```bash
@@ -51,7 +50,7 @@ If you wish to run the extension from source or contribute to development:
    cd yt-to-pdf
    ```
 
-2. **Install dependencies (optional, for testing)**:
+2. **Install testing dependencies (optional)**:
    ```bash
    npm install
    ```
@@ -62,7 +61,7 @@ If you wish to run the extension from source or contribute to development:
    - Click the **Load unpacked** button.
    - Select the project folder.
 
-4. The **YT to PDF** extension icon will now appear in your browser!
+4. The **YT to PDF** extension icon will now appear in your browser.
 
 ---
 
@@ -121,18 +120,16 @@ YT to PDF is built with strict user privacy standards:
 
 ---
 
-## 🤝 Contributing
+## 📄 License & Copyright
 
-Contributions, issues, and feature requests are welcome!
+**Copyright © 2026 Ashmit Verma. All Rights Reserved.**
 
-1. Fork the Project.
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`).
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`).
-4. Push to the Branch (`git push origin feature/AmazingFeature`).
-5. Open a Pull Request.
+This software is **proprietary and closed-source**. The source code is made publicly available for portfolio, demonstration, and educational review purposes only.
 
----
+- **No Unauthorized Distribution**: Unauthorized copying, modification, reverse engineering, redistribution, sublicensing, or commercial deployment of this software, in whole or in part, is strictly prohibited.
+- **Contributions**: As a closed-source product, external pull requests and public contributions are not accepted.
 
-## 📄 License
+For questions, permissions, or inquiries, please contact the author directly.
 
-Distributed under the MIT License. See `LICENSE` for more information.
+
+

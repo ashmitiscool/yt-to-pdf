@@ -15,8 +15,9 @@
     "notes",
     "chrome-extension"
   ],
-  "author": "",
-  "license": "MIT",
+  "private": true,
+  "author": "Ashmit Verma",
+  "license": "UNLICENSED",
   "dependencies": {
     "jspdf": "^4.2.1",
     "jszip": "^3.10.1",
