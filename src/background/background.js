@@ -1,9 +1,9 @@
 /**
- * YT SlideSnip - Background Service Worker
+ * YT to PDF - Background Service Worker
  */
 
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('YT SlideSnip Extension installed.');
+  console.log('YT to PDF Extension installed.');
 
   // Create context menus for quick access
   if (chrome.contextMenus) {

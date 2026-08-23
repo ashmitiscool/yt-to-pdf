@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "YT SlideSnip - YouTube to PPT & PDF",
+  "name": "YT to PDF",
   "version": "1.0.0",
   "description": "Extract presentation slides from YouTube videos and export them to PowerPoint (PPTX), PDF, or images with one click.",
   "permissions": [
