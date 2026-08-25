@@ -4,7 +4,9 @@
   "description": "Chrome Extension to extract slides from YouTube videos and export to PDF and PowerPoint (PPTX)",
   "main": "src/background/background.js",
   "scripts": {
-    "test": "node tests/detector.test.js"
+    "test": "node tests/detector.test.js",
+    "package": "node scripts/package.js",
+    "build": "node scripts/package.js"
   },
   "keywords": [
     "youtube",
