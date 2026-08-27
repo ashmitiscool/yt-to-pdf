@@ -109,12 +109,12 @@ npm test
 
 ## 🔐 Permissions & Privacy
 
-YT to PDF is built with strict user privacy standards:
+YT to PDF is built with strict user privacy and minimum permission standards:
 
-- `*://*.youtube.com/*`: Required solely to inject the capture overlay and access video frames on YouTube pages.
-- `storage`: Saves slide decks locally in your browser storage so you don't lose your progress across tabs.
-- `downloads`: Allows direct downloading of generated `.pdf`, `.pptx`, and `.zip` files to your computer.
-- `activeTab` & `scripting`: Facilitates seamless communication between the popup UI and the YouTube player.
+- `*://*.youtube.com/*`: Required solely to inject the slide capture overlay and access the video frame on YouTube watch pages.
+- `storage`: Saves extracted slide decks locally in your browser storage so you don't lose your progress across tabs.
+
+**Zero broad permissions:** Does not request `tabs`, `activeTab`, `downloads`, or `scripting`. All PDF, PowerPoint, and image exports are generated 100% locally in your browser without contacting external servers.
 
 **No analytics, no cookies, no cloud servers, and zero data collection.**
 

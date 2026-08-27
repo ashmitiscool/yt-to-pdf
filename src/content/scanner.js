@@ -1,5 +1,5 @@
 /**
- * YT SlideSnip - Fast Video Scanner & Frame Grabber
+ * YT to PDF - Fast Video Scanner & Frame Grabber
  * Programmatically seeks through YouTube HTML5 <video> to extract presentation slides.
  */
 

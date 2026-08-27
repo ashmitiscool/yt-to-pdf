@@ -1,5 +1,5 @@
 /**
- * YT SlideSnip - Detector Engine
+ * YT to PDF - Detector Engine
  * High-performance frame hashing, perceptual difference, and slide transition detection.
  * Designed to capture subtle slide changes (new text, bullet points, diagrams)
  * while filtering out small cursor movements, laser pointers, and video noise.

@@ -1,5 +1,5 @@
 /**
- * YT SlideSnip - Popup Controller
+ * YT to PDF - Popup Controller
  */
 
 document.addEventListener('DOMContentLoaded', async () => {

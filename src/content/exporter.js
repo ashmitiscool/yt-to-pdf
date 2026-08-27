@@ -1,5 +1,5 @@
 /**
- * YT SlideSnip - Exporter Engine
+ * YT to PDF - Exporter Engine
  * Compiles extracted slide decks into PowerPoint (.pptx), PDF (.pdf), and ZIP archives.
  */
 

@@ -1,5 +1,5 @@
 /**
- * YT SlideSnip - Content Script Entry Point
+ * YT to PDF - Content Script Entry Point
  * Injects controls into YouTube player, listens for shortcuts, and connects scanner & drawer.
  */
 

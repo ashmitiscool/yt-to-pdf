@@ -1,5 +1,5 @@
 /**
- * YT SlideSnip - Interactive Slide Deck Drawer UI
+ * YT to PDF - Interactive Slide Deck Drawer UI
  */
 
 (function (global) {
