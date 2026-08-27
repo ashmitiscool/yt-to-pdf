@@ -4,3 +4,5 @@ dist/
 .DS_Store
 Thumbs.db
 images/
+troubleshooting-chrome-web-store-violations.md
+.agents/
