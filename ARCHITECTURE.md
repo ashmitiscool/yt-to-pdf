@@ -34,55 +34,55 @@ Welcome to the developer and architecture documentation for **YT to PDF**. This 
 
 ```mermaid
 graph TD
-    subgraph Browser Context
-        subgraph Toolbar UI
-            POP[Popup: src/popup/popup.html / .js]
+    subgraph Browser_Context["Browser Context"]
+        subgraph Toolbar_UI["Toolbar UI"]
+            POP["Popup: src/popup/popup.html / .js"]
         end
 
-        subgraph Background Context
-            SW[Service Worker: src/background/background.js]
+        subgraph Background_Context["Background Context"]
+            SW["Service Worker: src/background/background.js"]
         end
 
-        subgraph YouTube Tab Content Script Context
-            CS[Content Orchestrator: src/content/content.js]
-            DET[Detector Engine: src/content/detector.js]
-            SCN[Scanner Engine: src/content/scanner.js]
-            DRW[Slide Drawer UI: src/content/drawer.js]
-            EXP[Exporter Engine: src/content/exporter.js]
-            CSS[Styles: src/styles/injected.css]
+        subgraph Content_Script_Context["YouTube Tab Content Script Context"]
+            CS["Content Orchestrator: src/content/content.js"]
+            DET["Detector Engine: src/content/detector.js"]
+            SCN["Scanner Engine: src/content/scanner.js"]
+            DRW["Slide Drawer UI: src/content/drawer.js"]
+            EXP["Exporter Engine: src/content/exporter.js"]
+            CSS["Styles: src/styles/injected.css"]
             
-            subgraph Vendor Libraries (lib/)
-                PDF[jsPDF: lib/jspdf.umd.min.js]
-                PPT[PptxGenJS: lib/pptxgen.bundle.js]
-                ZIP[JSZip: lib/jszip.min.js]
+            subgraph Vendor_Libs["Vendor Libraries (lib/)"]
+                PDF["jsPDF: lib/jspdf.umd.min.js"]
+                PPT["PptxGenJS: lib/pptxgen.bundle.js"]
+                ZIP["JSZip: lib/jszip.min.js"]
             end
         end
 
-        subgraph YouTube Page DOM
-            YDOM[YouTube Player & Controls]
-            YVID[HTML5 <video> Element]
+        subgraph YouTube_DOM["YouTube Page DOM"]
+            YDOM["YouTube Player & Controls"]
+            YVID["HTML5 video Element"]
         end
 
-        subgraph Chrome APIs
-            STOR[(chrome.storage.local)]
-            TABS[chrome.tabs / runtime IPC]
+        subgraph Chrome_APIs["Chrome APIs"]
+            STOR[("chrome.storage.local")]
+            TABS["chrome.tabs / runtime IPC"]
         end
     end
 
     %% Interactions
-    POP -- chrome.tabs.sendMessage --> CS
-    CS -- DOM Injection --> YDOM
-    CS -- Seeks / Reads Frames --> YVID
-    SCN -- Captures Frames to Canvas --> YVID
-    SCN -- Compares Frame Hashes --> DET
-    SCN -- Emits New Slide --> DRW
-    CS -- Manual Snap --> DRW
-    DRW -- Saves / Restores Decks --> STOR
-    DRW -- Triggers Export --> EXP
-    EXP -- Renders Presentation --> PPT
-    EXP -- Renders Document --> PDF
-    EXP -- Bundles Images --> ZIP
-    EXP -- Triggers Browser Download --> BrowserContext[Client File Download]
+    POP -->|"chrome.tabs.sendMessage"| CS
+    CS -->|"DOM Injection"| YDOM
+    CS -->|"Seeks / Reads Frames"| YVID
+    SCN -->|"Captures Frames to Canvas"| YVID
+    SCN -->|"Compares Frame Hashes"| DET
+    SCN -->|"Emits New Slide"| DRW
+    CS -->|"Manual Snap"| DRW
+    DRW -->|"Saves / Restores Decks"| STOR
+    DRW -->|"Triggers Export"| EXP
+    EXP -->|"Renders Presentation"| PPT
+    EXP -->|"Renders Document"| PDF
+    EXP -->|"Bundles Images"| ZIP
+    EXP -->|"Triggers Browser Download"| BrowserContext["Client File Download"]
 ```
 
 ---
@@ -298,7 +298,7 @@ sequenceDiagram
         VEND-->>EXP: Generates ZIP Blob
     end
 
-    EXP->>DOM: Creates temporary <a> element with Object URL
+    EXP->>DOM: Creates temporary download link element with Object URL
     DOM->>DOM: Dispatches click() event
     DOM-->>User: Browser downloads presentation file locally
 ```
