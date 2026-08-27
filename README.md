@@ -95,6 +95,8 @@ If you are evaluating the codebase locally or running tests for portfolio / demo
 - **Image Archiving**: [JSZip](https://github.com/Stuk/jszip) (zip packaging)
 - **Computer Vision Algorithm**: 64-bit perceptual difference hashing (`dHash`) with luminance normalization and block-level variance analysis.
 
+> 📖 **Developer Documentation**: For full technical details on directory layout, subsystem design, data flow diagrams, and the state management model, see [ARCHITECTURE.md](ARCHITECTURE.md).
+
 ---
 
 ## 🧪 Testing
