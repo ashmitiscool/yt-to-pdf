@@ -148,7 +148,8 @@ yt_to_ppt/
 │       └── injected.css           # In-page styles for injected player buttons & drawer overlay
 │
 └── tests/                         # Algorithmic test suite
-    └── detector.test.js           # Unit tests for perceptual hashing & transition detection
+    ├── detector.test.js           # Unit tests for perceptual hashing & transition detection
+    └── exporter.test.js           # Unit tests for clipboard frame export & fallback handling
 ```
 
 ---
@@ -160,9 +161,9 @@ yt_to_ppt/
 - **Responsibilities**:
   - **Single Injection Protection**: Guards against duplicate injection across Single Page Application (SPA) soft navigations using `window.__ytsnip_injected`.
   - **SPA Navigation Observer**: Listens to YouTube's custom navigation events (`yt-navigate-finish`) and URL changes to reload slide decks dynamically when the user changes videos without a page reload.
-  - **Player Controls Injection**: Injects custom camera (Snap), flash (Auto-Scan), and deck (Slide Deck) action buttons directly into YouTube's `.ytp-right-controls` bar.
-  - **Keyboard Shortcut Routing**: Listens for global hotkeys (<kbd>Alt</kbd> + <kbd>S</kbd> for Snap, <kbd>Alt</kbd> + <kbd>A</kbd> for Auto-Scan, <kbd>Alt</kbd> + <kbd>D</kbd> for Drawer).
-  - **IPC Message Dispatcher**: Handles messages sent from `popup.js` (`GET_STATUS`, `SNAP_SLIDE`, `START_SCAN`, `OPEN_DRAWER`, `EXPORT_DECK`).
+  - **Player Controls Injection**: Injects custom camera (Snap), clipboard (Screenshot to Clipboard), flash (Auto-Scan), and deck (Slide Deck) action buttons directly into YouTube's `.ytp-right-controls` bar.
+  - **Keyboard Shortcut Routing**: Listens for global hotkeys (<kbd>Alt</kbd> + <kbd>S</kbd> for Snap, <kbd>Alt</kbd> + <kbd>C</kbd> for Screenshot to Clipboard, <kbd>Alt</kbd> + <kbd>A</kbd> for Auto-Scan, <kbd>Alt</kbd> + <kbd>D</kbd> for Drawer).
+  - **IPC Message Dispatcher**: Handles messages sent from `popup.js` (`GET_STATUS`, `SNAP_SLIDE`, `COPY_FRAME`, `START_SCAN`, `OPEN_DRAWER`, `EXPORT_DECK`).
 
 ### Difference Hashing & Detection Engine (`src/content/detector.js`)
 - **Role**: Algorithmic core responsible for detecting slide transitions while rejecting spurious noise.
@@ -191,10 +192,13 @@ yt_to_ppt/
   - **Slide Deck Curation**: Delete unwanted frames, copy slide images directly to the system clipboard, or remove duplicates.
   - **Scan Controls & Preferences**: Sensitivity picker, scan step interval selector, and optional bounding-box cropping (e.g., removing speaker webcam overlays).
   - **Storage Synchronization**: Automatically persists decks to `chrome.storage.local` indexed by YouTube video ID.
+  - **Subtle Toast Feedback**: Includes compact, unobtrusive notification mode (`.ytsnip-toast-subtle`) for rapid actions like clipboard copying.
 
 ### Document & Slide Exporter (`src/content/exporter.js`)
-- **Role**: Assembles extracted slide decks into user-requested document formats.
-- **Export Formats**:
+- **Role**: Assembles extracted slide decks into user-requested document formats and provides clipboard copy utilities.
+- **Export Capabilities**:
+  - **Direct Frame to Clipboard (`copyVideoFrameToClipboard`)**: Captures the active `<video>` frame directly onto an offscreen canvas and writes a lossless `image/png` blob to `navigator.clipboard.write([ClipboardItem])` with dataURL text fallback.
+  - **Slide Image to Clipboard (`copySlideToClipboard`)**: Copies an existing slide data URL to the system clipboard as a PNG blob.
   - **PowerPoint (`.pptx`)**: Uses `PptxGenJS` to construct a 16:9 widescreen slide deck with high-resolution slide images filling each slide canvas.
   - **PDF Document (`.pdf`)**: Uses `jsPDF` to compile a multi-page landscape PDF document matching standard presentation dimensions.
   - **Image Archive (`.zip`)**: Uses `JSZip` to bundle sequential JPEG/PNG images into a downloadable archive.
@@ -234,6 +238,29 @@ sequenceDiagram
     DRW->>DRW: Renders new slide card in UI
     DRW->>STOR: Persists updated deck (ytsnip_deck_VIDEO_ID)
     DRW-->>User: Displays toast notification ("Slide Captured")
+```
+
+---
+
+### Screenshot Video Frame to Clipboard Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant YT as YouTube Video Player
+    participant CS as content.js
+    participant EXP as exporter.js
+    participant CLIP as System Clipboard
+    participant DRW as drawer.js
+
+    User->>CS: Presses Alt+C or clicks Clipboard Button
+    CS->>EXP: copyVideoFrameToClipboard(video)
+    EXP->>EXP: Draws native frame onto canvas & generates PNG blob
+    EXP->>CLIP: navigator.clipboard.write([ClipboardItem])
+    EXP-->>CS: Returns success boolean
+    CS->>DRW: showToast("Copied to clipboard", 1500, true)
+    DRW-->>User: Displays subtle, compact toast
 ```
 
 ---
@@ -364,8 +391,8 @@ YT to PDF adheres to the strictest Google Chrome Web Store policies and privacy 
 - Node.js (v16.0.0 or higher)
 - Google Chrome browser
 
-### 1. Running Algorithmic Tests
-The test suite validates the perceptual hashing and slide transition detection algorithms against synthetic frame scenarios (identical slides, cursor movements, laser pointers, layout changes):
+### 1. Running Algorithmic & Unit Tests
+The test suite validates the perceptual hashing and slide transition detection algorithms against synthetic frame scenarios (`tests/detector.test.js`) and verifies clipboard export and fallback mechanics (`tests/exporter.test.js`):
 
 ```bash
 npm test

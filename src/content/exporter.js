@@ -154,13 +154,38 @@
   }
 
   /**
+   * Writes a PNG image blob to the clipboard, with fallback to dataURL text.
+   * @param {Blob} blob
+   * @param {string} [fallbackDataUrl]
+   * @returns {Promise<boolean>}
+   */
+  async function writeBlobToClipboard(blob, fallbackDataUrl = '') {
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': blob })
+      ]);
+      return true;
+    } catch (err) {
+      console.warn('Direct binary clipboard copy failed:', err);
+      if (fallbackDataUrl) {
+        try {
+          await navigator.clipboard.writeText(fallbackDataUrl);
+          return true;
+        } catch (e) {
+          return false;
+        }
+      }
+      return false;
+    }
+  }
+
+  /**
    * Copies a single slide image to the system clipboard (for OneNote / Notion paste).
    * @param {string} dataUrl
    * @returns {Promise<boolean>}
    */
   async function copySlideToClipboard(dataUrl) {
     try {
-      // Need PNG blob for standard clipboard API
       const img = new Image();
       img.crossOrigin = 'anonymous';
       await new Promise((resolve, reject) => {
@@ -178,13 +203,9 @@
       const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
       if (!blob) throw new Error('Failed to create PNG blob');
 
-      await navigator.clipboard.write([
-        new ClipboardItem({ 'image/png': blob })
-      ]);
-      return true;
+      return await writeBlobToClipboard(blob, dataUrl);
     } catch (err) {
-      console.warn('Direct clipboard copy failed:', err);
-      // Fallback: copy as dataURL text if binary clipboard item is restricted
+      console.warn('Slide clipboard copy failed:', err);
       try {
         await navigator.clipboard.writeText(dataUrl);
         return true;
@@ -192,6 +213,28 @@
         return false;
       }
     }
+  }
+
+  /**
+   * Captures the current frame from an HTML5 video element directly to the system clipboard as a PNG image.
+   * @param {HTMLVideoElement} video
+   * @returns {Promise<boolean>}
+   */
+  async function copyVideoFrameToClipboard(video) {
+    if (!video || !video.videoWidth || !video.videoHeight) {
+      throw new Error('Video element not ready or invalid dimensions');
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+    if (!blob) throw new Error('Failed to create PNG blob');
+
+    return await writeBlobToClipboard(blob, canvas.toDataURL('image/png'));
   }
 
   /**
@@ -314,7 +357,8 @@
     exportToPDF,
     exportToZIP,
     printSlides,
-    copySlideToClipboard
+    copySlideToClipboard,
+    copyVideoFrameToClipboard
   };
 
   if (typeof module !== 'undefined' && module.exports) {

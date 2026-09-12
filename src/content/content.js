@@ -16,6 +16,7 @@
 
   const ICONS = {
     camera: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>`,
+    clipboard: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>`,
     scan: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`,
     deck: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>`
   };
@@ -92,7 +93,17 @@
       captureCurrentFrame();
     });
 
-    // 2. Auto-Scan Button
+    // 2. Screenshot to Clipboard Button
+    const clipBtn = document.createElement('button');
+    clipBtn.className = 'ytp-button ytsnip-yt-btn';
+    clipBtn.title = 'Copy Frame to Clipboard (Alt+C)';
+    clipBtn.innerHTML = ICONS.clipboard;
+    clipBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      copyFrameToClipboard();
+    });
+
+    // 3. Auto-Scan Button
     const scanBtn = document.createElement('button');
     scanBtn.className = 'ytp-button ytsnip-yt-btn';
     scanBtn.title = 'Auto-Scan All Slides (Alt+A)';
@@ -103,7 +114,7 @@
       startAutoScan();
     });
 
-    // 3. Open Deck Drawer Button
+    // 4. Open Deck Drawer Button
     const deckBtn = document.createElement('button');
     deckBtn.className = 'ytp-button ytsnip-yt-btn';
     deckBtn.title = 'Open Slide Deck (Alt+D)';
@@ -114,6 +125,7 @@
     });
 
     group.appendChild(snapBtn);
+    group.appendChild(clipBtn);
     group.appendChild(scanBtn);
     group.appendChild(deckBtn);
 
@@ -147,6 +159,31 @@
     } catch (err) {
       console.error('Frame capture failed:', err);
       drawer.showToast('Failed to capture frame: ' + err.message);
+    }
+  }
+
+  async function copyFrameToClipboard() {
+    const video = getVideoElement();
+    if (!video || isNaN(video.currentTime)) {
+      if (drawer) drawer.showToast('Video not ready', 1500, true);
+      return;
+    }
+
+    try {
+      const exporter = window.SlideExporter;
+      if (!exporter || !exporter.copyVideoFrameToClipboard) {
+        throw new Error('Exporter not ready');
+      }
+
+      const ok = await exporter.copyVideoFrameToClipboard(video);
+      if (ok) {
+        if (drawer) drawer.showToast('Copied to clipboard', 1500, true);
+      } else {
+        if (drawer) drawer.showToast('Failed to copy to clipboard', 2000, true);
+      }
+    } catch (err) {
+      console.warn('Screenshot to clipboard failed:', err);
+      if (drawer) drawer.showToast('Failed to copy to clipboard', 2000, true);
     }
   }
 
@@ -215,6 +252,12 @@
       captureCurrentFrame();
     }
 
+    // Alt+C: Copy current frame to clipboard
+    if (e.altKey && (e.key === 'c' || e.key === 'C')) {
+      e.preventDefault();
+      copyFrameToClipboard();
+    }
+
     // Alt+D: Toggle slide drawer
     if (e.altKey && (e.key === 'd' || e.key === 'D')) {
       e.preventDefault();
@@ -251,6 +294,9 @@
       } else if (request.action === 'SNAP_SLIDE') {
         captureCurrentFrame();
         sendResponse({ success: true, count: drawer ? drawer.slides.length : 0 });
+      } else if (request.action === 'COPY_FRAME') {
+        copyFrameToClipboard();
+        sendResponse({ success: true });
       } else if (request.action === 'START_SCAN') {
         startAutoScan(request.options || {});
         sendResponse({ success: true });

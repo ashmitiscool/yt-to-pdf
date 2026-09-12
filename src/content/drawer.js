@@ -204,14 +204,20 @@
       }
     }
 
-    showToast(message, duration = 2200) {
+    showToast(message, duration = 2200, isSubtle = false) {
       const textEl = this.toastEl.querySelector('#ytsnip-toast-text');
       if (textEl) textEl.textContent = message;
+      if (isSubtle) {
+        this.toastEl.classList.add('ytsnip-toast-subtle');
+      } else {
+        this.toastEl.classList.remove('ytsnip-toast-subtle');
+      }
       this.toastEl.classList.add('ytsnip-toast-visible');
 
       if (this._toastTimer) clearTimeout(this._toastTimer);
       this._toastTimer = setTimeout(() => {
         this.toastEl.classList.remove('ytsnip-toast-visible');
+        this.toastEl.classList.remove('ytsnip-toast-subtle');
       }, duration);
     }
 
@@ -457,8 +463,8 @@
           const exporter = global.SlideExporter || window.SlideExporter;
           if (exporter) {
             const ok = await exporter.copySlideToClipboard(slide.dataUrl);
-            if (ok) this.showToast('Slide copied to clipboard!');
-            else this.showToast('Could not copy slide');
+            if (ok) this.showToast('Copied to clipboard', 1500, true);
+            else this.showToast('Could not copy slide', 2000, true);
           }
         });
 

@@ -80,6 +80,25 @@
   color: #00e676;
 }
 
+/* Subtle compact toast for quick actions */
+.ytsnip-toast.ytsnip-toast-subtle {
+  bottom: 64px;
+  padding: 5px 12px;
+  font-size: 11.5px;
+  font-weight: 500;
+  border-radius: 6px;
+  background: rgba(22, 22, 22, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  gap: 6px;
+  letter-spacing: 0.15px;
+}
+
+.ytsnip-toast.ytsnip-toast-subtle .ytsnip-toast-icon {
+  width: 12px;
+  height: 12px;
+}
+
 /* Slide Deck Drawer Overlay */
 .ytsnip-drawer-backdrop {
   position: fixed;
