@@ -100,7 +100,10 @@ yt_to_ppt/
 ├── ARCHITECTURE.md                # Developer documentation (this document)
 ├── AGENTS.md                      # Workspace agent guidelines & architecture sync rules
 ├── LICENSE                        # Proprietary license terms
-├── troubleshooting-chrome-web-store-violations.md # CWS policy reference guide
+│
+├── docs/                          # In-depth technical guides & store references
+│   ├── detector-engine.md         # Difference hashing & slide transition detection reference
+│   └── troubleshooting-chrome-web-store-violations.md # CWS policy reference guide
 │
 ├── dist/                          # Production distribution builds (.zip packages)
 │   ├── yt-to-pdf-v1.0.0.zip
@@ -163,12 +166,13 @@ yt_to_ppt/
 
 ### Difference Hashing & Detection Engine (`src/content/detector.js`)
 - **Role**: Algorithmic core responsible for detecting slide transitions while rejecting spurious noise.
+- **Detailed Reference**: See [docs/detector-engine.md](docs/detector-engine.md) for full mathematical derivations, ITU-R BT.601 perceptual proofs, and API specifications.
 - **Key Algorithms**:
   - **Luminance Normalization**: Converts RGB pixel values into grayscale luminance:
     $$\text{Luminance} = 0.299R + 0.587G + 0.114B$$
   - **64-Bit Difference Hash (`dHash`)**: Resamples video frames into a $9 \times 8$ grid and calculates gradient differences between adjacent horizontal pixels to generate a 64-bit binary fingerprint.
   - **Hamming Distance**: Fast bitwise comparison determining structural layout changes.
-  - **Block-Level Color Variance ($16 \times 16$ Grid)**: Divides the frame into 256 sub-blocks, computing mean color and variance per block. This accurately identifies incremental slide changes (e.g., bullet point additions, code line appearances) while ignoring small localized movements (mouse pointers, speaker webcam gestures).
+  - **Block-Level Color Variance ($16 \times 9$ Grid)**: Divides the frame into 144 sub-blocks, computing mean color delta and active region counts. This accurately identifies incremental slide changes (e.g., bullet point additions, code line appearances) while ignoring small localized movements (mouse pointers, laser pointers, speaker webcam gestures).
   - **Preset Sensitivity Thresholds**: Configurable `low`, `medium`, and `high` thresholds balancing precision versus recall.
 
 ### Automated Video Scanner (`src/content/scanner.js`)
