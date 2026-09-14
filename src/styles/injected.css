@@ -328,6 +328,53 @@
   cursor: pointer;
 }
 
+/* Selection Ribbon */
+.ytsnip-selection-ribbon {
+  padding: 8px 20px;
+  background: #141414;
+  border-bottom: 1px solid #252525;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #aaa;
+}
+
+.ytsnip-selection-info {
+  font-weight: 500;
+  color: #ccc;
+  font-size: 12px;
+}
+
+.ytsnip-selection-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ytsnip-btn-pill {
+  background: #252525;
+  border: 1px solid #3a3a3a;
+  color: #ddd;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  line-height: 1.4;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.ytsnip-btn-pill:hover {
+  background: #383838;
+  color: #fff;
+  border-color: #555;
+}
+
+.ytsnip-btn-pill:active {
+  transform: scale(0.96);
+}
+
 /* Slides Content Container */
 .ytsnip-body {
   flex: 1;
@@ -444,6 +491,79 @@
   padding: 2px 6px;
   border-radius: 4px;
   pointer-events: none;
+  z-index: 2;
+}
+
+/* Card Selection Toggle Checkbox */
+.ytsnip-card-select-toggle {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 3;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ytsnip-card-checkbox {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  pointer-events: none;
+}
+
+.ytsnip-checkbox-custom {
+  width: 22px;
+  height: 22px;
+  background: rgba(18, 18, 18, 0.75);
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  transition: all 0.15s ease;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.ytsnip-checkbox-custom svg {
+  width: 14px !important;
+  height: 14px !important;
+  max-width: 14px !important;
+  max-height: 14px !important;
+  stroke: currentColor;
+  stroke-width: 3;
+}
+
+.ytsnip-card-checkbox:checked + .ytsnip-checkbox-custom {
+  background: #ff0033;
+  border-color: #ff0033;
+  color: #ffffff;
+}
+
+.ytsnip-card-select-toggle:hover .ytsnip-checkbox-custom {
+  border-color: #ffffff;
+  transform: scale(1.08);
+}
+
+/* Deselected Card Visual State */
+.ytsnip-card.ytsnip-card-deselected {
+  opacity: 0.45;
+  border: 1px dashed #555;
+  background: #181818;
+}
+
+.ytsnip-card.ytsnip-card-deselected .ytsnip-card-img {
+  filter: grayscale(70%) brightness(0.65);
+}
+
+.ytsnip-card.ytsnip-card-deselected:hover {
+  opacity: 0.8;
+  border-color: #777;
 }
 
 .ytsnip-card-time {
@@ -542,7 +662,13 @@
   justify-content: center;
   gap: 8px;
   white-space: nowrap;
-  transition: background 0.15s, transform 0.1s;
+  transition: background 0.15s, transform 0.1s, opacity 0.15s;
+}
+
+.ytsnip-export-btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .ytsnip-export-btn svg {

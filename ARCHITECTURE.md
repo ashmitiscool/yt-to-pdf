@@ -147,8 +147,9 @@ yt_to_ppt/
 │   └── styles/
 │       └── injected.css           # In-page styles for injected player buttons & drawer overlay
 │
-└── tests/                         # Algorithmic test suite
+└── tests/                         # Algorithmic and UI test suite
     ├── detector.test.js           # Unit tests for perceptual hashing & transition detection
+    ├── drawer.test.js             # Unit tests for slide selection, select/deselect all & deck curation
     └── exporter.test.js           # Unit tests for clipboard frame export & fallback handling
 ```
 
@@ -187,11 +188,12 @@ yt_to_ppt/
 ### Interactive Slide Deck Drawer (`src/content/drawer.js`)
 - **Role**: Rich, embedded UI allowing users to curate slides without leaving YouTube.
 - **Features**:
-  - **Card Grid Layout**: Visual gallery of all extracted slides displaying timestamps, slide index, and action buttons.
+  - **Card Grid Layout**: Visual gallery of all extracted slides displaying timestamps, slide index, selection checkbox toggles, and action buttons.
+  - **Selective Export Curation**: Individual slide selection toggle checkboxes with dimmed/dashed visual excluded state, plus one-click **Select All** and **Deselect All** bulk actions.
   - **Timestamp Navigation**: Clicking on a thumbnail jumps the YouTube video directly to that moment.
-  - **Slide Deck Curation**: Delete unwanted frames, copy slide images directly to the system clipboard, or remove duplicates.
+  - **Slide Deck Curation**: Reorder via drag-and-drop, delete unwanted frames, copy slide images directly to the system clipboard, or duplicate slides.
   - **Scan Controls & Preferences**: Sensitivity picker, scan step interval selector, and optional bounding-box cropping (e.g., removing speaker webcam overlays).
-  - **Storage Synchronization**: Automatically persists decks to `chrome.storage.local` indexed by YouTube video ID.
+  - **Storage Synchronization**: Automatically persists decks to `chrome.storage.local` indexed by YouTube video ID with preserved slide selection states.
   - **Subtle Toast Feedback**: Includes compact, unobtrusive notification mode (`.ytsnip-toast-subtle`) for rapid actions like clipboard copying.
 
 ### Document & Slide Exporter (`src/content/exporter.js`)
@@ -316,7 +318,8 @@ sequenceDiagram
     participant DOM as Browser DOM
 
     User->>DRW: Clicks Export (PDF / PPTX / ZIP)
-    DRW->>EXP: exportToPDF(slides, title) / exportToPPTX(...)
+    DRW->>DRW: Filters selected slides (getSelectedSlides)
+    DRW->>EXP: exportToPDF(selectedSlides, title) / exportToPPTX(...)
     
     alt PowerPoint (.pptx)
         EXP->>VEND: PptxGenJS.addSlide() for each frame
@@ -354,6 +357,7 @@ interface SlideItem {
   formattedTime: string;   // Human-readable timestamp (e.g. "02:22")
   width: number;           // Original capture width in px
   height: number;          // Original capture height in px
+  selected?: boolean;      // Selection state for selective export (default: true)
   hash?: string;           // 64-bit dHash string
 }
 
@@ -392,7 +396,7 @@ YT to PDF adheres to the strictest Google Chrome Web Store policies and privacy 
 - Google Chrome browser
 
 ### 1. Running Algorithmic & Unit Tests
-The test suite validates the perceptual hashing and slide transition detection algorithms against synthetic frame scenarios (`tests/detector.test.js`) and verifies clipboard export and fallback mechanics (`tests/exporter.test.js`):
+The test suite validates the perceptual hashing and slide transition detection algorithms against synthetic frame scenarios (`tests/detector.test.js`), verifies clipboard export and fallback mechanics (`tests/exporter.test.js`), and tests drawer slide selection curation and selective export filtering (`tests/drawer.test.js`):
 
 ```bash
 npm test

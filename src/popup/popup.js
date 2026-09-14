@@ -68,10 +68,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       btnSnap.disabled = false;
       btnAutoScan.disabled = false;
       btnDrawer.disabled = false;
-      btnExportPptx.disabled = res.slidesCount === 0;
-      btnExportPdf.disabled = res.slidesCount === 0;
-      btnExportPrint.disabled = res.slidesCount === 0;
-      btnExportZip.disabled = res.slidesCount === 0;
+      const exportDisabled = (res.selectedCount !== undefined ? res.selectedCount : res.slidesCount) === 0;
+      btnExportPptx.disabled = exportDisabled;
+      btnExportPdf.disabled = exportDisabled;
+      btnExportPrint.disabled = exportDisabled;
+      btnExportZip.disabled = exportDisabled;
     } else {
       statusPill.className = 'status-pill status-offline';
       statusPill.textContent = 'Connecting...';

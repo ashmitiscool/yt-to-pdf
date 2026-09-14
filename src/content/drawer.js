@@ -36,7 +36,9 @@
         onSeekVideo: (time) => {}
       };
 
-      this._buildDOM();
+      if (typeof document !== 'undefined') {
+        this._buildDOM();
+      }
     }
 
     setCallbacks({ onStartScan, onStopScan, onSeekVideo }) {
@@ -96,6 +98,16 @@
           </button>
         </div>
 
+        <div class="ytsnip-selection-ribbon" id="ytsnip-selection-ribbon" style="display: none;">
+          <div class="ytsnip-selection-info">
+            <span id="ytsnip-selection-count">0 of 0 selected</span>
+          </div>
+          <div class="ytsnip-selection-actions">
+            <button class="ytsnip-btn-pill" id="ytsnip-select-all-btn" title="Select all slides for export">Select All</button>
+            <button class="ytsnip-btn-pill" id="ytsnip-deselect-all-btn" title="Deselect all slides">Deselect All</button>
+          </div>
+        </div>
+
         <div class="ytsnip-body" id="ytsnip-body">
           <div class="ytsnip-empty-state" id="ytsnip-empty-state">
             <div class="ytsnip-empty-icon">${ICONS.deck}</div>
@@ -123,7 +135,7 @@
             </button>
           </div>
           <div class="ytsnip-footer-secondary">
-            <span style="color: #777;" id="ytsnip-footer-info">0 slides ready</span>
+            <span style="color: #777;" id="ytsnip-footer-info">0 of 0 slides selected</span>
             <button class="ytsnip-btn-link" id="ytsnip-clear-btn">Clear Deck</button>
           </div>
         </div>
@@ -163,6 +175,16 @@
         this.sensitivity = e.target.value;
       });
 
+      const selectAllBtn = this.drawerEl.querySelector('#ytsnip-select-all-btn');
+      if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', () => this.selectAll());
+      }
+
+      const deselectAllBtn = this.drawerEl.querySelector('#ytsnip-deselect-all-btn');
+      if (deselectAllBtn) {
+        deselectAllBtn.addEventListener('click', () => this.deselectAll());
+      }
+
       const exportPptxBtn = this.drawerEl.querySelector('#ytsnip-export-pptx');
       exportPptxBtn.addEventListener('click', () => this.exportDeck('pptx'));
 
@@ -186,14 +208,14 @@
 
     open() {
       this.isOpen = true;
-      this.backdropEl.classList.add('ytsnip-open');
-      this.drawerEl.classList.add('ytsnip-open');
+      if (this.backdropEl) this.backdropEl.classList.add('ytsnip-open');
+      if (this.drawerEl) this.drawerEl.classList.add('ytsnip-open');
     }
 
     close() {
       this.isOpen = false;
-      this.backdropEl.classList.remove('ytsnip-open');
-      this.drawerEl.classList.remove('ytsnip-open');
+      if (this.backdropEl) this.backdropEl.classList.remove('ytsnip-open');
+      if (this.drawerEl) this.drawerEl.classList.remove('ytsnip-open');
     }
 
     toggle() {
@@ -205,6 +227,7 @@
     }
 
     showToast(message, duration = 2200, isSubtle = false) {
+      if (!this.toastEl) return;
       const textEl = this.toastEl.querySelector('#ytsnip-toast-text');
       if (textEl) textEl.textContent = message;
       if (isSubtle) {
@@ -216,14 +239,16 @@
 
       if (this._toastTimer) clearTimeout(this._toastTimer);
       this._toastTimer = setTimeout(() => {
-        this.toastEl.classList.remove('ytsnip-toast-visible');
-        this.toastEl.classList.remove('ytsnip-toast-subtle');
+        if (this.toastEl) {
+          this.toastEl.classList.remove('ytsnip-toast-visible');
+          this.toastEl.classList.remove('ytsnip-toast-subtle');
+        }
       }, duration);
     }
 
     async loadForVideo(videoId, videoTitle = '') {
       this.videoId = videoId;
-      this.videoTitle = videoTitle || document.title.replace(/ - YouTube$/, '') || 'YouTube Presentation';
+      this.videoTitle = videoTitle || (typeof document !== 'undefined' ? document.title.replace(/ - YouTube$/, '') : '') || 'YouTube Presentation';
       this.slides = [];
 
       if (!videoId) return;
@@ -233,7 +258,10 @@
           const res = await chrome.storage.local.get([`ytsnip_deck_${videoId}`]);
           const stored = res[`ytsnip_deck_${videoId}`];
           if (stored && Array.isArray(stored)) {
-            this.slides = stored;
+            this.slides = stored.map(s => ({
+              ...s,
+              selected: s.selected !== false
+            }));
           }
         }
       } catch (err) {
@@ -256,13 +284,47 @@
       }
     }
 
+    getSelectedSlides() {
+      return this.slides.filter(s => s.selected !== false);
+    }
+
+    toggleSlideSelection(slideId) {
+      const slide = this.slides.find(s => s.id === slideId);
+      if (slide) {
+        slide.selected = slide.selected === false ? true : false;
+        this._saveSlides();
+        this._renderGrid();
+      }
+    }
+
+    selectAll() {
+      if (this.slides.length === 0) return;
+      this.slides.forEach(s => { s.selected = true; });
+      this._saveSlides();
+      this._renderGrid();
+      this.showToast('All slides selected');
+    }
+
+    deselectAll() {
+      if (this.slides.length === 0) return;
+      this.slides.forEach(s => { s.selected = false; });
+      this._saveSlides();
+      this._renderGrid();
+      this.showToast('All slides deselected');
+    }
+
     addSlide(slide, notify = true) {
+      const slideItem = {
+        ...slide,
+        selected: slide.selected !== false
+      };
+
       // Check if already in deck at very close timestamp (<1s)
-      const existingIdx = this.slides.findIndex(s => Math.abs(s.timestamp - slide.timestamp) < 1.0);
+      const existingIdx = this.slides.findIndex(s => Math.abs(s.timestamp - slideItem.timestamp) < 1.0);
       if (existingIdx !== -1) {
-        this.slides[existingIdx] = slide;
+        this.slides[existingIdx] = slideItem;
       } else {
-        this.slides.push(slide);
+        this.slides.push(slideItem);
         // Keep sorted by timestamp
         this.slides.sort((a, b) => a.timestamp - b.timestamp);
       }
@@ -271,7 +333,7 @@
       this._renderGrid();
 
       if (notify) {
-        this.showToast(`Slide captured at ${slide.formattedTime}! (Total: ${this.slides.length})`);
+        this.showToast(`Slide captured at ${slideItem.formattedTime}! (Total: ${this.slides.length})`);
       }
     }
 
@@ -288,7 +350,8 @@
       const clone = {
         ...original,
         id: 'slide_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-        timestamp: original.timestamp + 0.001
+        timestamp: original.timestamp + 0.001,
+        selected: original.selected !== false
       };
       // Insert immediately after the duplicated slide
       this.slides.splice(index + 1, 0, clone);
@@ -329,43 +392,77 @@
     }
 
     _renderGrid() {
+      if (typeof document === 'undefined' || !this.drawerEl) return;
+
       const grid = this.drawerEl.querySelector('#ytsnip-grid');
       const empty = this.drawerEl.querySelector('#ytsnip-empty-state');
       const badge = this.drawerEl.querySelector('#ytsnip-badge');
       const footerInfo = this.drawerEl.querySelector('#ytsnip-footer-info');
+      const selectionRibbon = this.drawerEl.querySelector('#ytsnip-selection-ribbon');
+      const selectionCountEl = this.drawerEl.querySelector('#ytsnip-selection-count');
+      const exportBtns = this.drawerEl.querySelectorAll('.ytsnip-export-btn');
+
+      const selectedSlides = this.getSelectedSlides();
+      const selectedCount = selectedSlides.length;
+      const totalCount = this.slides.length;
 
       // Update badge count in YouTube player controls if available
       const ytBadge = document.querySelector('.ytsnip-yt-badge');
       if (ytBadge) {
-        ytBadge.textContent = this.slides.length;
-        ytBadge.style.display = this.slides.length > 0 ? 'inline-block' : 'none';
+        ytBadge.textContent = totalCount;
+        ytBadge.style.display = totalCount > 0 ? 'inline-block' : 'none';
       }
 
-      badge.textContent = `${this.slides.length} slide${this.slides.length === 1 ? '' : 's'}`;
-      footerInfo.textContent = `${this.slides.length} slide${this.slides.length === 1 ? '' : 's'} ready`;
+      if (badge) badge.textContent = `${totalCount} slide${totalCount === 1 ? '' : 's'}`;
+      if (footerInfo) footerInfo.textContent = `${selectedCount} of ${totalCount} slide${totalCount === 1 ? '' : 's'} selected`;
 
-      if (this.slides.length === 0) {
-        empty.style.display = 'flex';
-        grid.style.display = 'none';
-        grid.innerHTML = '';
+      if (selectionRibbon) {
+        selectionRibbon.style.display = totalCount > 0 ? 'flex' : 'none';
+      }
+      if (selectionCountEl) {
+        selectionCountEl.textContent = `${selectedCount} of ${totalCount} selected`;
+      }
+
+      if (exportBtns) {
+        exportBtns.forEach(btn => {
+          btn.disabled = selectedCount === 0;
+        });
+      }
+
+      if (totalCount === 0) {
+        if (empty) empty.style.display = 'flex';
+        if (grid) {
+          grid.style.display = 'none';
+          grid.innerHTML = '';
+        }
         return;
       }
 
-      empty.style.display = 'none';
-      grid.style.display = 'grid';
-      grid.innerHTML = '';
+      if (empty) empty.style.display = 'none';
+      if (grid) {
+        grid.style.display = 'grid';
+        grid.innerHTML = '';
+      }
 
       this.slides.forEach((slide, index) => {
+        const isSelected = slide.selected !== false;
         const card = document.createElement('div');
-        card.className = 'ytsnip-card';
+        card.className = `ytsnip-card ${isSelected ? '' : 'ytsnip-card-deselected'}`;
         card.draggable = true;
         card.dataset.index = index;
+        card.dataset.slideId = slide.id;
         card.title = 'Drag to rearrange | Click preview to zoom';
 
         card.innerHTML = `
           <div class="ytsnip-card-preview">
             <img class="ytsnip-card-img" src="${slide.dataUrl}" alt="Slide ${index + 1}" />
             <span class="ytsnip-card-index"><span class="ytsnip-grip-dots">⠿</span> #${index + 1}</span>
+            <label class="ytsnip-card-select-toggle" title="${isSelected ? 'Deselect slide from export' : 'Select slide for export'}">
+              <input type="checkbox" class="ytsnip-card-checkbox" ${isSelected ? 'checked' : ''} />
+              <span class="ytsnip-checkbox-custom">
+                ${ICONS.check}
+              </span>
+            </label>
             <span class="ytsnip-card-time">${slide.formattedTime}</span>
           </div>
           <div class="ytsnip-card-actions">
@@ -384,9 +481,24 @@
           </div>
         `;
 
+        // Selection Toggle Event
+        const selectToggle = card.querySelector('.ytsnip-card-select-toggle');
+        if (selectToggle) {
+          selectToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+          });
+          const checkbox = selectToggle.querySelector('.ytsnip-card-checkbox');
+          if (checkbox) {
+            checkbox.addEventListener('change', (e) => {
+              e.stopPropagation();
+              this.toggleSlideSelection(slide.id);
+            });
+          }
+        }
+
         // --- Drag and Drop Reordering ---
         card.addEventListener('dragstart', (e) => {
-          if (e.target.closest('.ytsnip-card-btn')) {
+          if (e.target.closest('.ytsnip-card-btn') || e.target.closest('.ytsnip-card-select-toggle')) {
             e.preventDefault();
             return;
           }
@@ -427,95 +539,118 @@
         card.addEventListener('dragend', () => {
           this._draggedIndex = null;
           card.classList.remove('ytsnip-dragging');
-          grid.querySelectorAll('.ytsnip-card').forEach(c => {
-            c.classList.remove('ytsnip-drag-over', 'ytsnip-dragging');
-          });
+          if (grid) {
+            grid.querySelectorAll('.ytsnip-card').forEach(c => {
+              c.classList.remove('ytsnip-drag-over', 'ytsnip-dragging');
+            });
+          }
         });
 
         // Preview click -> lightbox zoom
         const preview = card.querySelector('.ytsnip-card-preview');
-        preview.addEventListener('click', (e) => {
-          // Only open lightbox if not dragging
-          if (!card.classList.contains('ytsnip-dragging')) {
-            this._showLightbox(slide.dataUrl);
-          }
-        });
+        if (preview) {
+          preview.addEventListener('click', (e) => {
+            if (e.target.closest('.ytsnip-card-select-toggle')) return;
+            // Only open lightbox if not dragging
+            if (!card.classList.contains('ytsnip-dragging')) {
+              this._showLightbox(slide.dataUrl);
+            }
+          });
+        }
 
         // Jump button
         const jumpBtn = card.querySelector('.ytsnip-card-btn-jump');
-        jumpBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          this.callbacks.onSeekVideo(slide.timestamp);
-          this.showToast(`Jumped to ${slide.formattedTime}`);
-        });
+        if (jumpBtn) {
+          jumpBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.callbacks.onSeekVideo(slide.timestamp);
+            this.showToast(`Jumped to ${slide.formattedTime}`);
+          });
+        }
 
         // Duplicate button
         const dupBtn = card.querySelector('.ytsnip-card-btn-duplicate');
-        dupBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          this.duplicateSlide(slide.id);
-        });
+        if (dupBtn) {
+          dupBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.duplicateSlide(slide.id);
+          });
+        }
 
         // Copy button
         const copyBtn = card.querySelector('.ytsnip-card-btn-copy');
-        copyBtn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          const exporter = global.SlideExporter || window.SlideExporter;
-          if (exporter) {
-            const ok = await exporter.copySlideToClipboard(slide.dataUrl);
-            if (ok) this.showToast('Copied to clipboard', 1500, true);
-            else this.showToast('Could not copy slide', 2000, true);
-          }
-        });
+        if (copyBtn) {
+          copyBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const exporter = global.SlideExporter || (typeof window !== 'undefined' ? window.SlideExporter : null);
+            if (exporter) {
+              const ok = await exporter.copySlideToClipboard(slide.dataUrl);
+              if (ok) this.showToast('Copied to clipboard', 1500, true);
+              else this.showToast('Could not copy slide', 2000, true);
+            }
+          });
+        }
 
         // Delete button
         const deleteBtn = card.querySelector('.ytsnip-card-btn-delete');
-        deleteBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          this.removeSlide(slide.id);
-        });
+        if (deleteBtn) {
+          deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.removeSlide(slide.id);
+          });
+        }
 
-        grid.appendChild(card);
+        if (grid) grid.appendChild(card);
       });
     }
 
     _showLightbox(dataUrl) {
+      if (typeof document === 'undefined') return;
       const box = document.createElement('div');
       box.className = 'ytsnip-lightbox';
       box.innerHTML = `<img src="${dataUrl}" alt="Zoomed Slide" />`;
       box.addEventListener('click', () => {
-        document.body.removeChild(box);
+        if (box.parentNode) {
+          box.parentNode.removeChild(box);
+        }
       });
       document.body.appendChild(box);
     }
 
     async exportDeck(type) {
       if (this.slides.length === 0) {
-        this.showToast('No slides to export! Capture or scan first.');
+        this.showToast('No slides in deck! Capture or scan first.');
         return;
       }
 
-      const exporter = global.SlideExporter || window.SlideExporter;
+      const selectedSlides = this.getSelectedSlides();
+      if (selectedSlides.length === 0) {
+        this.showToast('No slides selected! Select at least one slide to export.');
+        return;
+      }
+
+      const exporter = global.SlideExporter || (typeof window !== 'undefined' ? window.SlideExporter : null);
       if (!exporter) {
         this.showToast('Exporter module not loaded');
         return;
       }
 
       const title = this.videoTitle || 'YouTube Presentation';
-      this.showToast(`Generating ${type.toUpperCase()}... Please wait.`);
+      const slideCountText = `${selectedSlides.length} slide${selectedSlides.length === 1 ? '' : 's'}`;
+      this.showToast(`Generating ${type.toUpperCase()} (${slideCountText})... Please wait.`);
 
       try {
         if (type === 'pptx') {
-          await exporter.exportToPPTX(this.slides, title);
+          await exporter.exportToPPTX(selectedSlides, title);
         } else if (type === 'pdf') {
-          await exporter.exportToPDF(this.slides, title);
+          await exporter.exportToPDF(selectedSlides, title);
         } else if (type === 'print') {
-          await exporter.printSlides(this.slides, title);
+          await exporter.printSlides(selectedSlides, title);
         } else if (type === 'zip') {
-          await exporter.exportToZIP(this.slides, title);
+          await exporter.exportToZIP(selectedSlides, title);
         }
         if (type !== 'print') {
-          this.showToast(`${type.toUpperCase()} exported successfully!`);
+          this.showToast(`${type.toUpperCase()} exported successfully! (${slideCountText})`);
         }
       } catch (err) {
         console.error('Export error:', err);

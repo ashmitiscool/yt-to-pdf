@@ -289,6 +289,7 @@
           videoId: getVideoId(),
           videoTitle: getVideoTitle(),
           slidesCount: drawer ? drawer.slides.length : 0,
+          selectedCount: drawer ? drawer.getSelectedSlides().length : 0,
           isScanning: scanner ? scanner.isScanning() : false
         });
       } else if (request.action === 'SNAP_SLIDE') {
