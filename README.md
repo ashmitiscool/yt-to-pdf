@@ -1,7 +1,7 @@
 # 📄 YT to PDF - YouTube Slides to PDF & PPT Converter
 
 [![License: Proprietary](https://img.shields.io/badge/License-Proprietary%20%2F%20Closed--Source-red.svg)](LICENSE)
-[![Chrome Web Store](https://img.shields.io/badge/Chrome_Web_Store-YT_to_PDF-4285F4?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/)
+[![Chrome Web Store](https://img.shields.io/badge/Chrome_Web_Store-YT_to_PDF-4285F4?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/lgfdhdpoogecpdildmckhiakkgibhdkk?utm_source=item-share-cb)
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-success?logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/extensions/develop/migrate/manifest-v3)
 
 **YT to PDF** is a lightweight, privacy-focused Chrome Extension that extracts presentation slides directly from YouTube videos and converts them into **PDF documents**, **PowerPoint (`.pptx`) presentations**, or **high-resolution image archives** with a single click.
@@ -33,10 +33,13 @@ Whether you're studying online university lectures, watching tech conferences, o
 
 ### Method 1: Chrome Web Store (Recommended)
 
-1. Open Google Chrome and go to the **[Chrome Web Store](https://chromewebstore.google.com/)**.
-2. Search for **"YT to PDF"**.
-3. Click **Add to Chrome**.
-4. Pin **YT to PDF** to your Chrome toolbar for quick access!
+Install **YT to PDF** directly from the official Chrome Web Store:
+
+👉 **[Add to Chrome — YT to PDF on Chrome Web Store](https://chromewebstore.google.com/detail/lgfdhdpoogecpdildmckhiakkgibhdkk?utm_source=item-share-cb)**
+
+1. Visit the store page and click **Add to Chrome**.
+2. Confirm the prompt to install the extension.
+3. Pin **YT to PDF** to your Chrome toolbar for quick access!
 
 ---
 
