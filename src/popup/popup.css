@@ -207,6 +207,18 @@ body {
   background: #f55c23;
 }
 
+.btn-accent {
+  background: #1e2e26;
+  color: #00e676;
+  border: 1px solid rgba(0, 230, 118, 0.35);
+}
+
+.btn-accent:hover {
+  background: #253930;
+  border-color: #00e676;
+  color: #00ff88;
+}
+
 .btn-dark {
   background: #252525;
   color: #e0e0e0;

@@ -150,7 +150,8 @@ yt_to_ppt/
 └── tests/                         # Algorithmic and UI test suite
     ├── detector.test.js           # Unit tests for perceptual hashing & transition detection
     ├── drawer.test.js             # Unit tests for slide selection, select/deselect all & deck curation
-    └── exporter.test.js           # Unit tests for clipboard frame export & fallback handling
+    ├── exporter.test.js           # Unit tests for clipboard frame export & fallback handling
+    └── scanner.test.js            # Unit tests for video seeking, startFrom bounds & time formatting
 ```
 
 ---
@@ -182,6 +183,7 @@ yt_to_ppt/
 - **Key Mechanisms**:
   - **`captureVideoFrame(video, cropRect)`**: Captures the current video frame into an off-screen HTML5 `<canvas>` and produces optimized JPEG data URLs.
   - **Asynchronous Seek & Sync**: Seeks the HTML5 `<video>` element to specific timestamps and waits for `seeked` events before processing the frame.
+  - **Flexible Scan Range (`startFrom`, `endAt`)**: Allows starting automated scan directly from the beginning (`0:00`) or from the active playback timestamp (`startFrom = video.currentTime`), calculating progress percentage and ETA strictly across the active scanning span.
   - **Progression State Machine**: Supports `start()`, `pause()`, `resume()`, and `stop()` with configurable sample step intervals (e.g., every 1, 2, or 5 seconds).
   - **Progress Emitter**: Dispatches real-time percentage and slide count updates to the drawer UI and popup.
 
@@ -189,6 +191,7 @@ yt_to_ppt/
 - **Role**: Rich, embedded UI allowing users to curate slides without leaving YouTube.
 - **Features**:
   - **Card Grid Layout**: Visual gallery of all extracted slides displaying timestamps, slide index, selection checkbox toggles, and action buttons.
+  - **Dual Scan Action Triggers**: Provides dedicated **Scan All (0:00)** and dynamic **From Current (XX:XX)** action buttons directly in the options ribbon, updating live with video playback.
   - **Selective Export Curation**: Individual slide selection toggle checkboxes with dimmed/dashed visual excluded state, plus one-click **Select All** and **Deselect All** bulk actions.
   - **Timestamp Navigation**: Clicking on a thumbnail jumps the YouTube video directly to that moment.
   - **Slide Deck Curation**: Reorder via drag-and-drop, delete unwanted frames, copy slide images directly to the system clipboard, or duplicate slides.
@@ -209,9 +212,9 @@ yt_to_ppt/
 ### Toolbar Action Popup (`src/popup/`)
 - **Role**: Browser extension toolbar popup interface.
 - **Components**:
-  - `popup.html`: Markup for status indicators, active video title, slide counter, and quick action buttons.
+  - `popup.html`: Markup for status indicators, active video title, slide counter, and quick action buttons including dual **Auto-Scan All (from 0:00)** and **Auto-Scan From Current (XX:XX)**.
   - `popup.css`: Extension popup theme matching modern design standards.
-  - `popup.js`: Queries the active tab, verifies YouTube watch page state, and forwards commands to `content.js` via `chrome.tabs.sendMessage`.
+  - `popup.js`: Queries the active tab, verifies YouTube watch page state, queries active video timestamp via `GET_STATUS`, and forwards commands to `content.js` via `chrome.tabs.sendMessage`.
 
 ### Background Service Worker (`src/background/`)
 - **Role**: Manifest V3 background service worker (`src/background/background.js`).
@@ -279,11 +282,11 @@ sequenceDiagram
     participant DET as detector.js
     participant STOR as chrome.storage.local
 
-    User->>DRW: Clicks "Start Auto-Scan"
-    DRW->>SCN: startScan(video, options)
-    SCN->>VID: Pauses video and records original time
+    User->>DRW: Clicks "Scan All" (startFrom=0) or "From Current" (startFrom=video.currentTime)
+    DRW->>SCN: startScan(video, { sensitivity, stepSeconds, startFrom })
+    SCN->>VID: Pauses video and records original playback state
     
-    loop Every Step Interval until Video End
+    loop Every Step Interval from startFrom until Video End
         SCN->>VID: Sets currentTime += stepInterval
         VID-->>SCN: Fires 'seeked' event
         SCN->>SCN: captureVideoFrame(video)
@@ -396,7 +399,7 @@ YT to PDF adheres to the strictest Google Chrome Web Store policies and privacy 
 - Google Chrome browser
 
 ### 1. Running Algorithmic & Unit Tests
-The test suite validates the perceptual hashing and slide transition detection algorithms against synthetic frame scenarios (`tests/detector.test.js`), verifies clipboard export and fallback mechanics (`tests/exporter.test.js`), and tests drawer slide selection curation and selective export filtering (`tests/drawer.test.js`):
+The test suite validates the perceptual hashing and slide transition detection algorithms against synthetic frame scenarios (`tests/detector.test.js`), verifies clipboard export and fallback mechanics (`tests/exporter.test.js`), tests drawer slide selection curation and selective export filtering (`tests/drawer.test.js`), and tests automated video scanner bounds, `startFrom` offsets, and timestamp formatting (`tests/scanner.test.js`):
 
 ```bash
 npm test

@@ -10,7 +10,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const statScanStatus = document.getElementById('stat-scan-status');
 
   const btnSnap = document.getElementById('btn-snap');
-  const btnAutoScan = document.getElementById('btn-autoscan');
+  const btnAutoScanAll = document.getElementById('btn-autoscan-all');
+  const btnAutoScanCurrent = document.getElementById('btn-autoscan-current');
+  const btnCurrentTime = document.getElementById('btn-current-time');
   const btnDrawer = document.getElementById('btn-drawer');
   const btnExportPptx = document.getElementById('btn-export-pptx');
   const btnExportPdf = document.getElementById('btn-export-pdf');
@@ -46,7 +48,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       videoTitle.textContent = 'No YouTube Video Open';
       videoSubtitle.textContent = 'Open a YouTube video to use YT to PDF';
       btnSnap.disabled = true;
-      btnAutoScan.disabled = true;
+      if (btnAutoScanAll) btnAutoScanAll.disabled = true;
+      if (btnAutoScanCurrent) btnAutoScanCurrent.disabled = true;
       btnDrawer.disabled = true;
       btnExportPptx.disabled = true;
       btnExportPdf.disabled = true;
@@ -65,8 +68,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       statSlideCount.textContent = res.slidesCount || 0;
       statScanStatus.textContent = res.isScanning ? 'Scanning...' : 'Idle';
 
+      if (btnCurrentTime && res.formattedCurrentTime) {
+        btnCurrentTime.textContent = res.formattedCurrentTime;
+      }
+
       btnSnap.disabled = false;
-      btnAutoScan.disabled = false;
+      if (btnAutoScanAll) btnAutoScanAll.disabled = false;
+      if (btnAutoScanCurrent) btnAutoScanCurrent.disabled = false;
       btnDrawer.disabled = false;
       const exportDisabled = (res.selectedCount !== undefined ? res.selectedCount : res.slidesCount) === 0;
       btnExportPptx.disabled = exportDisabled;
@@ -93,11 +101,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Auto scan button
-  btnAutoScan.addEventListener('click', async () => {
-    await sendMessageToTab({ action: 'START_SCAN' });
-    window.close(); // Close popup so user sees on-page scanner
-  });
+  // Auto scan all button (from 0:00)
+  if (btnAutoScanAll) {
+    btnAutoScanAll.addEventListener('click', async () => {
+      await sendMessageToTab({ action: 'START_SCAN', options: { startFrom: 0 } });
+      window.close(); // Close popup so user sees on-page scanner
+    });
+  }
+
+  // Auto scan from current time button
+  if (btnAutoScanCurrent) {
+    btnAutoScanCurrent.addEventListener('click', async () => {
+      await sendMessageToTab({ action: 'START_SCAN', options: { startFrom: 'current' } });
+      window.close(); // Close popup so user sees on-page scanner
+    });
+  }
 
   // Drawer button
   btnDrawer.addEventListener('click', async () => {

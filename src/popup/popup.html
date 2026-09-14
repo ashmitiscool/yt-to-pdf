@@ -57,12 +57,19 @@
         <span class="btn-shortcut">Alt+S</span>
       </button>
 
-      <button class="btn btn-secondary" id="btn-autoscan">
+      <button class="btn btn-secondary" id="btn-autoscan-all">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
         </svg>
-        <span>Auto-Scan All Slides</span>
-        <span class="btn-shortcut">Alt+A</span>
+        <span>Auto-Scan All (from 0:00)</span>
+      </button>
+
+      <button class="btn btn-accent" id="btn-autoscan-current">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+        <span>Auto-Scan From Current</span>
+        <span class="btn-shortcut" id="btn-current-time">00:00</span>
       </button>
 
       <button class="btn btn-dark" id="btn-drawer">

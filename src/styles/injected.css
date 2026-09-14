@@ -296,6 +296,18 @@
   color: #fff;
 }
 
+.ytsnip-scan-btn-secondary {
+  background: #252525;
+  color: #00e676;
+  border: 1px solid #3c3c3c;
+}
+
+.ytsnip-scan-btn-secondary:hover {
+  background: #303030;
+  border-color: #00e676;
+  color: #00ff88;
+}
+
 .ytsnip-scan-btn-danger {
   background: #444;
   color: #ff5252;
@@ -305,16 +317,41 @@
   opacity: 0.9;
 }
 
+.ytsnip-scan-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.ytsnip-scan-actions .ytsnip-scan-btn {
+  flex: 1;
+  height: 32px;
+  padding: 0 10px;
+}
+
 /* Options Ribbon */
 .ytsnip-options-ribbon {
-  padding: 10px 20px;
+  padding: 10px 18px;
   background: #1a1a1a;
   border-bottom: 1px solid #262626;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 8px;
   font-size: 12px;
   color: #888;
+}
+
+.ytsnip-options-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ytsnip-option-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .ytsnip-select {

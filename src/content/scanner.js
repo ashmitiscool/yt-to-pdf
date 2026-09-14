@@ -91,6 +91,10 @@
       this._cancelRequested = true;
     }
 
+    _captureFrame(video, cropRect) {
+      return captureVideoFrame(video, cropRect);
+    }
+
     /**
      * Starts the auto-scan process on the video.
      */
@@ -179,7 +183,7 @@
           }
 
           if (shouldCapture) {
-            const frame = captureVideoFrame(video, cropRect);
+            const frame = this._captureFrame(video, cropRect);
             const slideId = 'slide_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
             const slide = {
               id: slideId,

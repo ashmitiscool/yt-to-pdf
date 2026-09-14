@@ -38,6 +38,11 @@
     return document.title.replace(/ - YouTube$/, '').trim() || 'YouTube Presentation';
   }
 
+  function getVideoCurrentTime() {
+    const video = getVideoElement();
+    return video && !isNaN(video.currentTime) ? video.currentTime : 0;
+  }
+
   function initApp() {
     if (!drawer) {
       drawer = new window.SlideDrawer();
@@ -46,7 +51,8 @@
       drawer.setCallbacks({
         onStartScan: (options) => startAutoScan(options),
         onStopScan: () => stopAutoScan(),
-        onSeekVideo: (time) => seekVideoTo(time)
+        onSeekVideo: (time) => seekVideoTo(time),
+        onGetCurrentTime: () => getVideoCurrentTime()
       });
     }
 
@@ -106,12 +112,13 @@
     // 3. Auto-Scan Button
     const scanBtn = document.createElement('button');
     scanBtn.className = 'ytp-button ytsnip-yt-btn';
-    scanBtn.title = 'Auto-Scan All Slides (Alt+A)';
+    scanBtn.title = 'Auto-Scan Slides (Alt+A)';
     scanBtn.innerHTML = ICONS.scan;
     scanBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      drawer.open();
-      startAutoScan();
+      if (drawer) {
+        drawer.open();
+      }
     });
 
     // 4. Open Deck Drawer Button
@@ -199,6 +206,13 @@
       return;
     }
 
+    let startFrom = 0;
+    if (options.startFrom === 'current') {
+      startFrom = video.currentTime && !isNaN(video.currentTime) ? Math.max(0, video.currentTime) : 0;
+    } else if (typeof options.startFrom === 'number' && !isNaN(options.startFrom)) {
+      startFrom = Math.max(0, options.startFrom);
+    }
+
     drawer.showScanBanner(true);
     drawer.open();
 
@@ -206,6 +220,7 @@
       videoElement: video,
       stepSeconds: options.stepSeconds || 2,
       sensitivity: options.sensitivity || drawer.sensitivity || 'medium',
+      startFrom,
       onProgress: (progress) => {
         drawer.updateScanProgress(progress);
       },
@@ -264,12 +279,11 @@
       if (drawer) drawer.toggle();
     }
 
-    // Alt+A: Start auto-scan
+    // Alt+A: Open slide drawer for scan options
     if (e.altKey && (e.key === 'a' || e.key === 'A')) {
       e.preventDefault();
       if (drawer) {
         drawer.open();
-        startAutoScan();
       }
     }
   });
@@ -284,10 +298,19 @@
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       if (request.action === 'GET_STATUS') {
         const video = getVideoElement();
+        const curTime = video && !isNaN(video.currentTime) ? video.currentTime : 0;
+        const dur = video && !isNaN(video.duration) ? video.duration : 0;
+        const formattedCur = (window.SlideScanner && window.SlideScanner.formatTime)
+          ? window.SlideScanner.formatTime(curTime)
+          : '00:00';
+
         sendResponse({
           hasVideo: !!video,
           videoId: getVideoId(),
           videoTitle: getVideoTitle(),
+          currentTime: curTime,
+          duration: dur,
+          formattedCurrentTime: formattedCur,
           slidesCount: drawer ? drawer.slides.length : 0,
           selectedCount: drawer ? drawer.getSelectedSlides().length : 0,
           isScanning: scanner ? scanner.isScanning() : false

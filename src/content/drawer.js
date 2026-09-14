@@ -29,11 +29,13 @@
       this.isOpen = false;
       this.sensitivity = 'medium';
       this.scanInterval = 2;
+      this.currentVideoTime = 0;
 
       this.callbacks = {
         onStartScan: () => {},
         onStopScan: () => {},
-        onSeekVideo: (time) => {}
+        onSeekVideo: (time) => {},
+        onGetCurrentTime: () => 0
       };
 
       if (typeof document !== 'undefined') {
@@ -41,10 +43,11 @@
       }
     }
 
-    setCallbacks({ onStartScan, onStopScan, onSeekVideo }) {
+    setCallbacks({ onStartScan, onStopScan, onSeekVideo, onGetCurrentTime }) {
       if (onStartScan) this.callbacks.onStartScan = onStartScan;
       if (onStopScan) this.callbacks.onStopScan = onStopScan;
       if (onSeekVideo) this.callbacks.onSeekVideo = onSeekVideo;
+      if (onGetCurrentTime) this.callbacks.onGetCurrentTime = onGetCurrentTime;
     }
 
     _buildDOM() {
@@ -85,17 +88,24 @@
         </div>
 
         <div class="ytsnip-options-ribbon">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span>Sensitivity:</span>
-            <select class="ytsnip-select" id="ytsnip-sensitivity-select">
-              <option value="high">High (Subtle changes)</option>
-              <option value="medium" selected>Balanced (Standard)</option>
-              <option value="low">Low (Major slides only)</option>
-            </select>
+          <div class="ytsnip-options-row">
+            <div class="ytsnip-option-group">
+              <span>Sensitivity:</span>
+              <select class="ytsnip-select" id="ytsnip-sensitivity-select">
+                <option value="high">High (Subtle changes)</option>
+                <option value="medium" selected>Balanced (Standard)</option>
+                <option value="low">Low (Major slides only)</option>
+              </select>
+            </div>
           </div>
-          <button class="ytsnip-scan-btn ytsnip-scan-btn-primary" id="ytsnip-start-scan-btn">
-            ${ICONS.scan} Auto-Scan Video
-          </button>
+          <div class="ytsnip-scan-actions" id="ytsnip-scan-actions">
+            <button class="ytsnip-scan-btn ytsnip-scan-btn-primary" id="ytsnip-scan-all-btn" title="Scan entire video from 0:00">
+              ${ICONS.scan} Scan All (0:00)
+            </button>
+            <button class="ytsnip-scan-btn ytsnip-scan-btn-secondary" id="ytsnip-scan-current-btn" title="Scan slides starting from current video timestamp">
+              ${ICONS.play} <span id="ytsnip-scan-current-text">From Current (00:00)</span>
+            </button>
+          </div>
         </div>
 
         <div class="ytsnip-selection-ribbon" id="ytsnip-selection-ribbon" style="display: none;">
@@ -157,13 +167,28 @@
       const closeBtn = this.drawerEl.querySelector('#ytsnip-close-btn');
       closeBtn.addEventListener('click', () => this.close());
 
-      const startScanBtn = this.drawerEl.querySelector('#ytsnip-start-scan-btn');
-      startScanBtn.addEventListener('click', () => {
-        this.callbacks.onStartScan({
-          sensitivity: this.sensitivity,
-          stepSeconds: this.scanInterval
+      const scanAllBtn = this.drawerEl.querySelector('#ytsnip-scan-all-btn');
+      if (scanAllBtn) {
+        scanAllBtn.addEventListener('click', () => {
+          this.callbacks.onStartScan({
+            sensitivity: this.sensitivity,
+            stepSeconds: this.scanInterval,
+            startFrom: 0
+          });
         });
-      });
+      }
+
+      const scanCurrentBtn = this.drawerEl.querySelector('#ytsnip-scan-current-btn');
+      if (scanCurrentBtn) {
+        scanCurrentBtn.addEventListener('click', () => {
+          const currentTime = this.callbacks.onGetCurrentTime ? this.callbacks.onGetCurrentTime() : (this.currentVideoTime || 0);
+          this.callbacks.onStartScan({
+            sensitivity: this.sensitivity,
+            stepSeconds: this.scanInterval,
+            startFrom: currentTime
+          });
+        });
+      }
 
       const cancelScanBtn = this.drawerEl.querySelector('#ytsnip-cancel-scan-btn');
       cancelScanBtn.addEventListener('click', () => {
@@ -206,8 +231,27 @@
       });
     }
 
+    updateCurrentVideoTime(time) {
+      if (typeof time === 'number' && !isNaN(time)) {
+        this.currentVideoTime = Math.max(0, time);
+        const textEl = this.drawerEl ? this.drawerEl.querySelector('#ytsnip-scan-current-text') : null;
+        if (textEl) {
+          const formatted = (global.SlideScanner && global.SlideScanner.formatTime)
+            ? global.SlideScanner.formatTime(this.currentVideoTime)
+            : `${Math.floor(this.currentVideoTime)}s`;
+          textEl.textContent = `From Current (${formatted})`;
+        }
+      }
+    }
+
     open() {
       this.isOpen = true;
+      if (this.callbacks.onGetCurrentTime) {
+        try {
+          const curTime = this.callbacks.onGetCurrentTime();
+          this.updateCurrentVideoTime(curTime);
+        } catch (e) {}
+      }
       if (this.backdropEl) this.backdropEl.classList.add('ytsnip-open');
       if (this.drawerEl) this.drawerEl.classList.add('ytsnip-open');
     }
@@ -369,13 +413,13 @@
 
     showScanBanner(show = true) {
       const banner = this.drawerEl.querySelector('#ytsnip-scan-banner');
-      const startBtn = this.drawerEl.querySelector('#ytsnip-start-scan-btn');
+      const scanActions = this.drawerEl.querySelector('#ytsnip-scan-actions');
       if (show) {
-        banner.style.display = 'flex';
-        startBtn.style.display = 'none';
+        if (banner) banner.style.display = 'flex';
+        if (scanActions) scanActions.style.display = 'none';
       } else {
-        banner.style.display = 'none';
-        startBtn.style.display = 'inline-flex';
+        if (banner) banner.style.display = 'none';
+        if (scanActions) scanActions.style.display = 'flex';
       }
     }
 
