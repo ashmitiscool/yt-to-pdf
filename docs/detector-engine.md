@@ -242,8 +242,8 @@ Samples a frame and returns pre-computed dHash and block sample buffers for fast
   }
   ```
 
-### `isSlideTransition(prevFeatures, currFeatures, options)`
-Main decision entry point determining if a frame difference represents a true slide transition.
+### `classifyTransition(prevFeatures, currFeatures, options)`
+Classifies visual differences between two frames into structural transition categories:
 - **Parameters**:
   - `prevFeatures` (`Object`): Feature object returned by `extractFrameFeatures`.
   - `currFeatures` (`Object`): Feature object returned by `extractFrameFeatures`.
@@ -251,6 +251,24 @@ Main decision entry point determining if a frame difference represents a true sl
 - **Returns**:
   ```typescript
   {
+    type: 'MAJOR_TRANSITION' | 'INCREMENTAL_UPDATE' | 'NO_CHANGE';
+    isTransition: boolean;     // True if type !== 'NO_CHANGE'
+    hamming: number;          // Computed Hamming distance (0-64)
+    blockDiff: number;        // Global average block diff (%)
+    changedBlocksCount: number // Number of blocks exceeding 2.5% delta
+  }
+  ```
+
+### `isSlideTransition(prevFeatures, currFeatures, options)`
+Backward-compatible wrapper around `classifyTransition`.
+- **Parameters**:
+  - `prevFeatures` (`Object`): Feature object returned by `extractFrameFeatures`.
+  - `currFeatures` (`Object`): Feature object returned by `extractFrameFeatures`.
+  - `options` (`Object`, optional): `{ sensitivity?: 'low' | 'medium' | 'high' }`
+- **Returns**:
+  ```typescript
+  {
+    type: 'MAJOR_TRANSITION' | 'INCREMENTAL_UPDATE' | 'NO_CHANGE';
     isTransition: boolean;     // True if a slide transition occurred
     hamming: number;          // Computed Hamming distance (0-64)
     blockDiff: number;        // Global average block diff (%)
@@ -278,3 +296,6 @@ npm test
 | **Test 4: Genuine Slide Transition** | Dark theme layout switching to light layout | `hamming: 6`, `blockDiff: 69.21%`, `isTransition: true` | ✅ PASS |
 | **Test 5: Content Addition** | Slide adding major new diagram block (30% area) | `hamming: 4`, `blockDiff: 27.44%`, `isTransition: true` | ✅ PASS |
 | **Test 6: Subtle Template Step** | New equation/bullet lines added to existing slide | `hamming: 2`, `blockDiff: 9.68%`, `isTransition: true` | ✅ PASS |
+| **Test 7: Major Layout Classification** | Full dark-to-light theme layout shift | `type: 'MAJOR_TRANSITION'`, `isTransition: true` | ✅ PASS |
+| **Test 8: Incremental Update Classification** | Single bullet point line added on white template | `type: 'INCREMENTAL_UPDATE'`, `isTransition: true` | ✅ PASS |
+| **Test 9: Cursor Noise Classification** | Mouse pointer moving across different coordinates | `type: 'NO_CHANGE'`, `isTransition: false` | ✅ PASS |

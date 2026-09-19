@@ -102,11 +102,13 @@
       videoElement,
       stepSeconds = 2,
       sensitivity = 'medium',
+      captureMode = 'final_only',
       cropRect = null,
       startFrom = 0,
       endAt = null,
       onProgress = () => {},
       onSlideFound = () => {},
+      onSlideUpdated = () => {},
       onComplete = () => {},
       onError = () => {}
     }) {
@@ -169,20 +171,22 @@
           // Extract frame features
           const currentFeatures = detector.extractFrameFeatures(video);
 
-          let shouldCapture = false;
+          const isInitialFrame = this._capturedSlides.length === 0;
+          let classification = null;
 
-          if (this._capturedSlides.length === 0) {
-            // First frame is always our initial slide
-            shouldCapture = true;
+          if (isInitialFrame) {
+            classification = { type: 'MAJOR_TRANSITION', isTransition: true };
+          } else if (typeof detector.classifyTransition === 'function') {
+            classification = detector.classifyTransition(lastSlideFeatures, currentFeatures, { sensitivity });
           } else {
-            const comparison = detector.isSlideTransition(lastSlideFeatures, currentFeatures, { sensitivity });
-            // Require minimum 1 second spacing between detected slides
-            if (comparison.isTransition && (currentTime - lastSlideTime >= 1.0)) {
-              shouldCapture = true;
-            }
+            const comp = detector.isSlideTransition(lastSlideFeatures, currentFeatures, { sensitivity });
+            classification = {
+              type: comp.type || (comp.isTransition ? 'MAJOR_TRANSITION' : 'NO_CHANGE'),
+              isTransition: comp.isTransition
+            };
           }
 
-          if (shouldCapture) {
+          if (isInitialFrame || classification.type === 'MAJOR_TRANSITION') {
             const frame = this._captureFrame(video, cropRect);
             const slideId = 'slide_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
             const slide = {
@@ -199,6 +203,49 @@
             lastSlideTime = currentTime;
 
             onSlideFound(slide, this._capturedSlides.length);
+          } else if (classification.type === 'INCREMENTAL_UPDATE') {
+            if (captureMode === 'final_only') {
+              // Replace/update active slide in-place with latest built frame
+              const frame = this._captureFrame(video, cropRect);
+              const lastIdx = this._capturedSlides.length - 1;
+              if (lastIdx >= 0) {
+                const existingSlide = this._capturedSlides[lastIdx];
+                const updatedSlide = {
+                  ...existingSlide,
+                  timestamp: currentTime,
+                  formattedTime: formatTime(currentTime),
+                  dataUrl: frame.dataUrl,
+                  width: frame.width,
+                  height: frame.height
+                };
+
+                this._capturedSlides[lastIdx] = updatedSlide;
+                lastSlideFeatures = currentFeatures;
+                lastSlideTime = currentTime;
+
+                onSlideUpdated(updatedSlide, lastIdx);
+              }
+            } else {
+              // 'all_steps' mode: append new step if at least 1s elapsed
+              if (currentTime - lastSlideTime >= 1.0) {
+                const frame = this._captureFrame(video, cropRect);
+                const slideId = 'slide_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+                const slide = {
+                  id: slideId,
+                  timestamp: currentTime,
+                  formattedTime: formatTime(currentTime),
+                  dataUrl: frame.dataUrl,
+                  width: frame.width,
+                  height: frame.height
+                };
+
+                this._capturedSlides.push(slide);
+                lastSlideFeatures = currentFeatures;
+                lastSlideTime = currentTime;
+
+                onSlideFound(slide, this._capturedSlides.length);
+              }
+            }
           }
 
           // Compute progress & ETA

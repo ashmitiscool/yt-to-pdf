@@ -171,5 +171,71 @@ console.log('=== Running SlideDetector Tests ===\n');
   console.log('✔ Test 6 Passed: Subtle slide transition reliably detected');
 }
 
+// Test 7: classifyTransition returns MAJOR_TRANSITION for major layout switch
+{
+  const slide1 = createSyntheticFrame(320, 180, (x, y, w, h) => [20, 20, 30]);
+  const slide2 = createSyntheticFrame(320, 180, (x, y, w, h) => [255, 255, 255]);
+
+  const feat1 = SlideDetector.extractFrameFeatures(slide1);
+  const feat2 = SlideDetector.extractFrameFeatures(slide2);
+
+  const res = SlideDetector.classifyTransition(feat1, feat2, { sensitivity: 'medium' });
+  assert.strictEqual(res.type, 'MAJOR_TRANSITION', 'Theme shift must classify as MAJOR_TRANSITION');
+  assert.strictEqual(res.isTransition, true, 'Theme shift must be a transition');
+  console.log('✔ Test 7 Passed: classifyTransition correctly identifies MAJOR_TRANSITION');
+}
+
+// Test 8: classifyTransition returns INCREMENTAL_UPDATE for single bullet point addition
+{
+  const slide1 = createSyntheticFrame(320, 180, (x, y, w, h) => {
+    if (y < h * 0.15) return [20, 50, 120];
+    if (y >= 35 && y <= 50 && x >= 30 && x <= 200) return [30, 30, 30];
+    return [255, 255, 255];
+  });
+
+  const slide2 = createSyntheticFrame(320, 180, (x, y, w, h) => {
+    if (y < h * 0.15) return [20, 50, 120];
+    if (y >= 35 && y <= 50 && x >= 30 && x <= 200) return [30, 30, 30];
+    // Add single bullet point line (intersecting row sample sy=80)
+    if (y >= 70 && y <= 90 && x >= 30 && x <= 180) return [30, 30, 30];
+    return [255, 255, 255];
+  });
+
+  const feat1 = SlideDetector.extractFrameFeatures(slide1);
+  const feat2 = SlideDetector.extractFrameFeatures(slide2);
+
+  const res = SlideDetector.classifyTransition(feat1, feat2, { sensitivity: 'medium' });
+  console.log(`  Incremental update test: Type=${res.type}, Hamming=${res.hamming}, BlockDiff=${res.blockDiff.toFixed(2)}%, ChangedBlocks=${res.changedBlocksCount}`);
+  assert.strictEqual(res.type, 'INCREMENTAL_UPDATE', 'Bullet point addition on same slide must classify as INCREMENTAL_UPDATE');
+  assert.strictEqual(res.isTransition, true, 'Incremental update must have isTransition = true');
+  console.log('✔ Test 8 Passed: classifyTransition correctly identifies INCREMENTAL_UPDATE');
+}
+
+// Test 9: classifyTransition returns NO_CHANGE for cursor movement
+{
+  const baseSlide = (x, y, w, h) => {
+    if (y < h * 0.2) return [30, 100, 200];
+    return [250, 250, 250];
+  };
+
+  const f1 = createSyntheticFrame(320, 180, (x, y, w, h) => {
+    if (x >= 50 && x <= 56 && y >= 50 && y <= 56) return [0, 0, 0];
+    return baseSlide(x, y, w, h);
+  });
+
+  const f2 = createSyntheticFrame(320, 180, (x, y, w, h) => {
+    if (x >= 120 && x <= 126 && y >= 80 && y <= 86) return [0, 0, 0];
+    return baseSlide(x, y, w, h);
+  });
+
+  const feat1 = SlideDetector.extractFrameFeatures(f1);
+  const feat2 = SlideDetector.extractFrameFeatures(f2);
+
+  const res = SlideDetector.classifyTransition(feat1, feat2, { sensitivity: 'medium' });
+  assert.strictEqual(res.type, 'NO_CHANGE', 'Cursor movement must classify as NO_CHANGE');
+  assert.strictEqual(res.isTransition, false, 'Cursor movement isTransition must be false');
+  console.log('✔ Test 9 Passed: classifyTransition correctly identifies NO_CHANGE for cursor movement');
+}
+
 console.log('\n✅ All Detector tests passed successfully!');
 

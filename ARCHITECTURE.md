@@ -102,6 +102,7 @@ yt_to_ppt/
 ├── LICENSE                        # Proprietary license terms
 │
 ├── docs/                          # In-depth technical guides & store references
+│   ├── autoscan-modes-and-sensitivity-guide.md # Comprehensive guide on auto-scan modes & sensitivity combinations
 │   ├── detector-engine.md         # Difference hashing & slide transition detection reference
 │   └── troubleshooting-chrome-web-store-violations.md # CWS policy reference guide
 │
@@ -175,7 +176,8 @@ yt_to_ppt/
     $$\text{Luminance} = 0.299R + 0.587G + 0.114B$$
   - **64-Bit Difference Hash (`dHash`)**: Resamples video frames into a $9 \times 8$ grid and calculates gradient differences between adjacent horizontal pixels to generate a 64-bit binary fingerprint.
   - **Hamming Distance**: Fast bitwise comparison determining structural layout changes.
-  - **Block-Level Color Variance ($16 \times 9$ Grid)**: Divides the frame into 144 sub-blocks, computing mean color delta and active region counts. This accurately identifies incremental slide changes (e.g., bullet point additions, code line appearances) while ignoring small localized movements (mouse pointers, laser pointers, speaker webcam gestures).
+  - **Block-Level Color Variance ($16 \times 9$ Grid)**: Divides the frame into 144 sub-blocks, computing mean color delta and active region counts.
+  - **Two-Tier Transition Classification (`classifyTransition`)**: Classifies visual differences into `MAJOR_TRANSITION` (new slide topic / layout switch), `INCREMENTAL_UPDATE` (bullet point addition, drawing, code typing on same slide), and `NO_CHANGE` (noise / cursor / laser pointer).
   - **Preset Sensitivity Thresholds**: Configurable `low`, `medium`, and `high` thresholds balancing precision versus recall.
 
 ### Automated Video Scanner (`src/content/scanner.js`)
@@ -185,17 +187,22 @@ yt_to_ppt/
   - **Asynchronous Seek & Sync**: Seeks the HTML5 `<video>` element to specific timestamps and waits for `seeked` events before processing the frame.
   - **Flexible Scan Range (`startFrom`, `endAt`)**: Allows starting automated scan directly from the beginning (`0:00`) or from the active playback timestamp (`startFrom = video.currentTime`), calculating progress percentage and ETA strictly across the active scanning span.
   - **Progression State Machine**: Supports `start()`, `pause()`, `resume()`, and `stop()` with configurable sample step intervals (e.g., every 1, 2, or 5 seconds).
+  - **Dual Capture Modes (`captureMode`)**:
+    - `'final_only'` *(Default & Recommended)*: Updates active slide in-place upon `INCREMENTAL_UPDATE` and emits `onSlideUpdated`, guaranteeing exactly 1 final, fully populated slide per lecture topic.
+    - `'all_steps'`: Captures each intermediate animation or bullet step as a separate slide entry.
   - **Progress Emitter**: Dispatches real-time percentage and slide count updates to the drawer UI and popup.
 
 ### Interactive Slide Deck Drawer (`src/content/drawer.js`)
 - **Role**: Rich, embedded UI allowing users to curate slides without leaving YouTube.
 - **Features**:
   - **Card Grid Layout**: Visual gallery of all extracted slides displaying timestamps, slide index, selection checkbox toggles, and action buttons.
+  - **In-Place Live Card Updating (`updateSlide`)**: Replaces the active slide thumbnail, timestamp, and metadata in-place during incremental updates without resetting scroll position or re-rendering the entire grid.
+  - **Capture Mode Configuration**: Allows toggling between `Final Slides Only (Clean)` and `All Steps (Incremental)` directly in the Options Ribbon with automatic persistence in `chrome.storage.local`.
   - **Dual Scan Action Triggers**: Provides dedicated **Scan All (0:00)** and dynamic **From Current (XX:XX)** action buttons directly in the options ribbon, updating live with video playback.
   - **Selective Export Curation**: Individual slide selection toggle checkboxes with dimmed/dashed visual excluded state, plus one-click **Select All** and **Deselect All** bulk actions.
   - **Timestamp Navigation**: Clicking on a thumbnail jumps the YouTube video directly to that moment.
   - **Slide Deck Curation**: Reorder via drag-and-drop, delete unwanted frames, copy slide images directly to the system clipboard, or duplicate slides.
-  - **Scan Controls & Preferences**: Sensitivity picker, scan step interval selector, and optional bounding-box cropping (e.g., removing speaker webcam overlays).
+  - **Scan Controls & Preferences**: Sensitivity picker, capture mode picker, scan step interval selector, and optional bounding-box cropping.
   - **Storage Synchronization**: Automatically persists decks to `chrome.storage.local` indexed by YouTube video ID with preserved slide selection states.
   - **Subtle Toast Feedback**: Includes compact, unobtrusive notification mode (`.ytsnip-toast-subtle`) for rapid actions like clipboard copying.
 
@@ -283,7 +290,7 @@ sequenceDiagram
     participant STOR as chrome.storage.local
 
     User->>DRW: Clicks "Scan All" (startFrom=0) or "From Current" (startFrom=video.currentTime)
-    DRW->>SCN: startScan(video, { sensitivity, stepSeconds, startFrom })
+    DRW->>SCN: startScan(video, { sensitivity, captureMode, stepSeconds, startFrom })
     SCN->>VID: Pauses video and records original playback state
     
     loop Every Step Interval from startFrom until Video End
@@ -291,13 +298,19 @@ sequenceDiagram
         VID-->>SCN: Fires 'seeked' event
         SCN->>SCN: captureVideoFrame(video)
         SCN->>DET: extractFrameFeatures(currentFrame)
-        DET-->>SCN: Returns { dHash, blockVariance }
-        SCN->>DET: isSlideTransition(prevFeatures, currentFeatures)
-        DET-->>SCN: Returns { isTransition: true/false }
+        DET-->>SCN: Returns { dHash, blockData }
+        SCN->>DET: classifyTransition(prevFeatures, currentFeatures)
+        DET-->>SCN: Returns { type: 'MAJOR_TRANSITION' | 'INCREMENTAL_UPDATE' | 'NO_CHANGE' }
         
-        opt If Transition Detected
+        alt type === 'MAJOR_TRANSITION'
             SCN->>DRW: addSlide(currentFrame, timestamp)
-            DRW->>DRW: Appends slide thumbnail & updates badge
+            DRW->>DRW: Appends new slide thumbnail & updates badge
+        else type === 'INCREMENTAL_UPDATE' && captureMode === 'final_only'
+            SCN->>DRW: updateSlide(index, currentFrame)
+            DRW->>DRW: Replaces active slide thumbnail in-place
+        else type === 'INCREMENTAL_UPDATE' && captureMode === 'all_steps'
+            SCN->>DRW: addSlide(currentFrame, timestamp)
+            DRW->>DRW: Appends incremental step thumbnail
         end
         SCN->>DRW: onProgress(percentage, currentScanTime)
     end
@@ -347,9 +360,8 @@ sequenceDiagram
 Slide decks are stored locally in Chrome's sandboxed storage (`chrome.storage.local`). Each video's deck is partitioned by its unique YouTube video ID.
 
 ### Storage Key Format
-```
-ytsnip_deck_<VIDEO_ID>
-```
+- `ytsnip_deck_<VIDEO_ID>`: Slide deck data for a specific YouTube video.
+- `ytsnip_capture_mode`: Persistent capture mode preference (`'final_only'` | `'all_steps'`).
 
 ### Data Schema (`SlideDeck`)
 ```typescript

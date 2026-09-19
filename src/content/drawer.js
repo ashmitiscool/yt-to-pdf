@@ -28,6 +28,7 @@
       this.videoTitle = 'YouTube Presentation';
       this.isOpen = false;
       this.sensitivity = 'medium';
+      this.captureMode = 'final_only';
       this.scanInterval = 2;
       this.currentVideoTime = 0;
 
@@ -95,6 +96,13 @@
                 <option value="high">High (Subtle changes)</option>
                 <option value="medium" selected>Balanced (Standard)</option>
                 <option value="low">Low (Major slides only)</option>
+              </select>
+            </div>
+            <div class="ytsnip-option-group">
+              <span>Mode:</span>
+              <select class="ytsnip-select" id="ytsnip-mode-select" title="Final Slides replaces earlier frames with the completed slide">
+                <option value="final_only" selected>Final Slides (Clean)</option>
+                <option value="all_steps">All Steps (Incremental)</option>
               </select>
             </div>
           </div>
@@ -172,6 +180,7 @@
         scanAllBtn.addEventListener('click', () => {
           this.callbacks.onStartScan({
             sensitivity: this.sensitivity,
+            captureMode: this.captureMode,
             stepSeconds: this.scanInterval,
             startFrom: 0
           });
@@ -184,6 +193,7 @@
           const currentTime = this.callbacks.onGetCurrentTime ? this.callbacks.onGetCurrentTime() : (this.currentVideoTime || 0);
           this.callbacks.onStartScan({
             sensitivity: this.sensitivity,
+            captureMode: this.captureMode,
             stepSeconds: this.scanInterval,
             startFrom: currentTime
           });
@@ -199,6 +209,16 @@
       sensitivitySelect.addEventListener('change', (e) => {
         this.sensitivity = e.target.value;
       });
+
+      const modeSelect = this.drawerEl.querySelector('#ytsnip-mode-select');
+      if (modeSelect) {
+        modeSelect.addEventListener('change', (e) => {
+          this.captureMode = e.target.value;
+          if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+            chrome.storage.local.set({ ytsnip_capture_mode: this.captureMode });
+          }
+        });
+      }
 
       const selectAllBtn = this.drawerEl.querySelector('#ytsnip-select-all-btn');
       if (selectAllBtn) {
@@ -299,13 +319,18 @@
 
       try {
         if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-          const res = await chrome.storage.local.get([`ytsnip_deck_${videoId}`]);
+          const res = await chrome.storage.local.get([`ytsnip_deck_${videoId}`, 'ytsnip_capture_mode']);
           const stored = res[`ytsnip_deck_${videoId}`];
           if (stored && Array.isArray(stored)) {
             this.slides = stored.map(s => ({
               ...s,
               selected: s.selected !== false
             }));
+          }
+          if (res.ytsnip_capture_mode) {
+            this.captureMode = res.ytsnip_capture_mode;
+            const modeSelect = this.drawerEl ? this.drawerEl.querySelector('#ytsnip-mode-select') : null;
+            if (modeSelect) modeSelect.value = this.captureMode;
           }
         }
       } catch (err) {
@@ -378,6 +403,34 @@
 
       if (notify) {
         this.showToast(`Slide captured at ${slideItem.formattedTime}! (Total: ${this.slides.length})`);
+      }
+    }
+
+    updateSlide(index, slide) {
+      if (typeof index !== 'number' || index < 0 || index >= this.slides.length) {
+        return;
+      }
+      const existing = this.slides[index];
+      const mergedSlide = {
+        ...existing,
+        ...slide,
+        id: existing.id,
+        selected: existing.selected !== false
+      };
+      this.slides[index] = mergedSlide;
+      this._saveSlides();
+
+      // Update DOM card directly without full re-render
+      if (typeof document !== 'undefined' && this.drawerEl) {
+        const card = this.drawerEl.querySelector(`.ytsnip-card[data-slide-id="${existing.id}"]`);
+        if (card) {
+          const img = card.querySelector('.ytsnip-card-img');
+          const time = card.querySelector('.ytsnip-card-time');
+          const jumpBtn = card.querySelector('.ytsnip-card-btn-jump');
+          if (img && slide.dataUrl) img.src = slide.dataUrl;
+          if (time && slide.formattedTime) time.textContent = slide.formattedTime;
+          if (jumpBtn && slide.formattedTime) jumpBtn.title = `Jump to ${slide.formattedTime} in video`;
+        }
       }
     }
 

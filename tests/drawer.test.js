@@ -90,5 +90,34 @@ global.chrome = {
   assert.ok(toastMsg.includes('No slides selected'), 'Feedback toast should indicate no slides selected');
   console.log('✔ Test 6 Passed: Export is safely aborted when 0 slides are selected');
 
+  // Test 7: updateSlide updates slide in-place without altering deck length or ID
+  {
+    drawer.selectAll();
+    const originalSlideCount = drawer.slides.length;
+    const originalId = drawer.slides[1].id;
+
+    drawer.updateSlide(1, {
+      timestamp: 25,
+      formattedTime: '00:25',
+      dataUrl: 'data:image/jpeg;base64,updated_bbb'
+    });
+
+    assert.strictEqual(drawer.slides.length, originalSlideCount, 'Deck length must not change after updateSlide');
+    assert.strictEqual(drawer.slides[1].id, originalId, 'Slide ID must remain unchanged after updateSlide');
+    assert.strictEqual(drawer.slides[1].timestamp, 25, 'Timestamp must be updated to 25s');
+    assert.strictEqual(drawer.slides[1].formattedTime, '00:25', 'Formatted time must be updated to 00:25');
+    assert.strictEqual(drawer.slides[1].dataUrl, 'data:image/jpeg;base64,updated_bbb', 'DataURL must be updated');
+    assert.strictEqual(drawer.slides[1].selected, true, 'Selection state must be preserved');
+    console.log('✔ Test 7 Passed: updateSlide updates slide properties in place while preserving ID and selection');
+  }
+
+  // Test 8: updateSlide handles invalid index safely
+  {
+    drawer.updateSlide(-1, { timestamp: 99 });
+    drawer.updateSlide(999, { timestamp: 99 });
+    assert.strictEqual(drawer.slides.length, 3, 'Invalid indices must not corrupt slide deck');
+    console.log('✔ Test 8 Passed: updateSlide safely ignores out-of-bounds indices');
+  }
+
   console.log('\n✅ All Drawer Selection tests passed successfully!');
 })();

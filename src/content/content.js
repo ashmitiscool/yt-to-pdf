@@ -220,12 +220,16 @@
       videoElement: video,
       stepSeconds: options.stepSeconds || 2,
       sensitivity: options.sensitivity || drawer.sensitivity || 'medium',
+      captureMode: options.captureMode || drawer.captureMode || 'final_only',
       startFrom,
       onProgress: (progress) => {
         drawer.updateScanProgress(progress);
       },
       onSlideFound: (slide, count) => {
         drawer.addSlide(slide, false);
+      },
+      onSlideUpdated: (slide, index) => {
+        drawer.updateSlide(index, slide);
       },
       onComplete: (slides, wasCancelled) => {
         drawer.showScanBanner(false);

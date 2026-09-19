@@ -179,24 +179,31 @@
   }
 
   /**
-   * Determines if the current frame represents a genuine slide transition.
-   * 
-   * Sensitivity presets:
-   * - 'high' (Very responsive to subtle notes/text steps):
-   *     avgDiff >= 1.2% OR (hamming >= 2 && changedBlocksCount >= 2) OR changedBlocksCount >= 3
-   * - 'medium' (Balanced, default for lectures & study presentations):
-   *     avgDiff >= 2.0% OR (hamming >= 3 && changedBlocksCount >= 2) OR changedBlocksCount >= 4
-   * - 'low' (Strict, only major slide template changes):
-   *     avgDiff >= 5.0% OR (hamming >= 6 && changedBlocksCount >= 6)
+   * Classifies the visual difference between two frames into:
+   * - 'MAJOR_TRANSITION': New slide topic, new background/layout, major scene cut
+   * - 'INCREMENTAL_UPDATE': Progressive bullet point addition, drawing, code typing on same slide
+   * - 'NO_CHANGE': Static frame, cursor movement, laser pointer, or minor compression noise
    *
    * @param {Object} prevFeatures Output of extractFrameFeatures
    * @param {Object} currFeatures Output of extractFrameFeatures
-   * @param {Object} [options]
-   * @returns {{isTransition: boolean, hamming: number, blockDiff: number, changedBlocksCount: number}}
+   * @param {Object} [options] { sensitivity?: 'low' | 'medium' | 'high' }
+   * @returns {{
+   *   type: 'MAJOR_TRANSITION' | 'INCREMENTAL_UPDATE' | 'NO_CHANGE',
+   *   isTransition: boolean,
+   *   hamming: number,
+   *   blockDiff: number,
+   *   changedBlocksCount: number
+   * }}
    */
-  function isSlideTransition(prevFeatures, currFeatures, options = {}) {
+  function classifyTransition(prevFeatures, currFeatures, options = {}) {
     if (!prevFeatures || !currFeatures) {
-      return { isTransition: true, hamming: 64, blockDiff: 100, changedBlocksCount: 144 };
+      return {
+        type: 'MAJOR_TRANSITION',
+        isTransition: true,
+        hamming: 64,
+        blockDiff: 100,
+        changedBlocksCount: 144
+      };
     }
 
     const sensitivity = options.sensitivity || 'medium';
@@ -204,36 +211,67 @@
     const blockAnalysis = analyzeBlockDifference(prevFeatures.blockData, currFeatures.blockData);
     const { avgDiff, changedBlocksCount } = blockAnalysis;
 
-    let isTransition = false;
+    // 1. Noise Filter: single block or sub-threshold diff is NO_CHANGE (cursor/laser/noise)
+    if (changedBlocksCount <= 1 && avgDiff < 0.8 && hamming <= 1) {
+      return {
+        type: 'NO_CHANGE',
+        isTransition: false,
+        hamming,
+        blockDiff: avgDiff,
+        changedBlocksCount
+      };
+    }
+
+    // 2. Sensitivity criteria for detecting any change (incremental or major)
+    let isAnyChange = false;
+    let isMajor = false;
 
     if (sensitivity === 'high') {
       // High sensitivity: catches single line bullet additions, small diagrams
-      if (avgDiff >= 1.2 || (hamming >= 2 && changedBlocksCount >= 2) || changedBlocksCount >= 3) {
-        isTransition = true;
-      }
+      isAnyChange = (avgDiff >= 1.2) || (hamming >= 2 && changedBlocksCount >= 2) || (changedBlocksCount >= 3);
+      isMajor = (hamming >= 3) || (avgDiff >= 6.0 && changedBlocksCount >= 6) || (changedBlocksCount >= 20);
     } else if (sensitivity === 'low') {
       // Low sensitivity: only major visual redesigns
-      if (avgDiff >= 4.5 || (hamming >= 6 && changedBlocksCount >= 6) || changedBlocksCount >= 10) {
-        isTransition = true;
-      }
+      isAnyChange = (avgDiff >= 4.5) || (hamming >= 6 && changedBlocksCount >= 6) || (changedBlocksCount >= 10);
+      isMajor = isAnyChange;
     } else {
-      // Balanced (Medium - Default): catches all standard slide and text changes while ignoring mouse cursors
-      if (avgDiff >= 2.0 || (hamming >= 3 && changedBlocksCount >= 2) || (hamming >= 2 && avgDiff >= 1.5) || changedBlocksCount >= 4) {
-        isTransition = true;
-      }
+      // Balanced (Medium - Default): catches all standard slide and text changes
+      isAnyChange = (avgDiff >= 2.0) || (hamming >= 3 && changedBlocksCount >= 2) || (hamming >= 2 && avgDiff >= 1.5) || (changedBlocksCount >= 4);
+      isMajor = (hamming >= 4) || (avgDiff >= 8.0 && changedBlocksCount >= 8) || (changedBlocksCount >= 30);
     }
 
-    // Safety filter: If only 1 single block changed and total difference is tiny (<0.8%), it's a cursor / noise
-    if (changedBlocksCount <= 1 && avgDiff < 0.8 && hamming <= 1) {
-      isTransition = false;
+    // Safety fallback: if changedBlocksCount <= 1, it's never a major transition
+    if (changedBlocksCount <= 1) {
+      isMajor = false;
+    }
+
+    let type = 'NO_CHANGE';
+    if (isMajor) {
+      type = 'MAJOR_TRANSITION';
+    } else if (isAnyChange) {
+      type = 'INCREMENTAL_UPDATE';
     }
 
     return {
-      isTransition,
+      type,
+      isTransition: type !== 'NO_CHANGE',
       hamming,
       blockDiff: avgDiff,
       changedBlocksCount
     };
+  }
+
+  /**
+   * Determines if the current frame represents a genuine slide transition.
+   * Backward-compatible wrapper around classifyTransition.
+   *
+   * @param {Object} prevFeatures Output of extractFrameFeatures
+   * @param {Object} currFeatures Output of extractFrameFeatures
+   * @param {Object} [options]
+   * @returns {{isTransition: boolean, type: string, hamming: number, blockDiff: number, changedBlocksCount: number}}
+   */
+  function isSlideTransition(prevFeatures, currFeatures, options = {}) {
+    return classifyTransition(prevFeatures, currFeatures, options);
   }
 
   const SlideDetector = {
@@ -244,6 +282,7 @@
     analyzeBlockDifference,
     computeBlockDifference: (a, b) => analyzeBlockDifference(a, b).avgDiff,
     extractFrameFeatures,
+    classifyTransition,
     isSlideTransition
   };
 

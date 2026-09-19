@@ -141,6 +141,77 @@ SlideScanner.VideoScanner.prototype._captureFrame = () => ({
     console.log('✔ Test 4 Passed: Scan handles out-of-bounds startFrom gracefully');
   }
 
+  // Test 5: startScan with captureMode = 'final_only' replaces incremental slide steps in-place
+  {
+    const scanner4 = new SlideScanner.VideoScanner();
+    const mockVideo4 = createMockVideo(30, 0);
+
+    scanner4._seekVideo = async (video, time) => {
+      video.currentTime = time;
+    };
+
+    // Override classifyTransition for mock frames
+    // t=0 (Initial) -> MAJOR_TRANSITION
+    // t=10 -> INCREMENTAL_UPDATE (bullet point added)
+    // t=20 -> INCREMENTAL_UPDATE (bullet point 2 added)
+    // t=30 -> MAJOR_TRANSITION (slide 2)
+    SlideDetector.classifyTransition = (prev, curr) => {
+      if (mockVideo4.currentTime === 10 || mockVideo4.currentTime === 20) {
+        return { type: 'INCREMENTAL_UPDATE', isTransition: true };
+      }
+      return { type: 'MAJOR_TRANSITION', isTransition: true };
+    };
+
+    const updatedEvents = [];
+    const foundEvents = [];
+
+    const slides4 = await scanner4.startScan({
+      videoElement: mockVideo4,
+      stepSeconds: 10,
+      startFrom: 0,
+      captureMode: 'final_only',
+      onSlideFound: (s) => foundEvents.push(s),
+      onSlideUpdated: (s, idx) => updatedEvents.push({ slide: s, idx })
+    });
+
+    assert.strictEqual(foundEvents.length, 2, 'Should find initial slide and 1 major transition');
+    assert.strictEqual(updatedEvents.length, 2, 'Should update incremental steps twice (at 10s and 20s)');
+    assert.strictEqual(slides4.length, 2, 'Final deck should contain exactly 2 unique slides in final_only mode');
+    assert.strictEqual(slides4[0].timestamp, 20, 'First slide timestamp should be updated to final complete step (20s)');
+    assert.strictEqual(slides4[1].timestamp, 30, 'Second slide timestamp should be 30s');
+    console.log('✔ Test 5 Passed: final_only mode replaces incremental steps in-place and preserves final state');
+  }
+
+  // Test 6: startScan with captureMode = 'all_steps' appends each incremental step
+  {
+    const scanner5 = new SlideScanner.VideoScanner();
+    const mockVideo5 = createMockVideo(30, 0);
+
+    scanner5._seekVideo = async (video, time) => {
+      video.currentTime = time;
+    };
+
+    SlideDetector.classifyTransition = (prev, curr) => {
+      if (mockVideo5.currentTime === 10 || mockVideo5.currentTime === 20) {
+        return { type: 'INCREMENTAL_UPDATE', isTransition: true };
+      }
+      return { type: 'MAJOR_TRANSITION', isTransition: true };
+    };
+
+    const foundEvents5 = [];
+
+    const slides5 = await scanner5.startScan({
+      videoElement: mockVideo5,
+      stepSeconds: 10,
+      startFrom: 0,
+      captureMode: 'all_steps',
+      onSlideFound: (s) => foundEvents5.push(s)
+    });
+
+    assert.strictEqual(foundEvents5.length, 4, 'Should capture all 4 steps in all_steps mode');
+    assert.strictEqual(slides5.length, 4, 'Final deck should contain 4 slides in all_steps mode');
+    console.log('✔ Test 6 Passed: all_steps mode preserves every intermediate bullet step');
+  }
 
   console.log('\n✅ All Scanner tests passed successfully!');
 })().catch(err => {
