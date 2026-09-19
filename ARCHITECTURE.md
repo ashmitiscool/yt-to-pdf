@@ -357,22 +357,27 @@ sequenceDiagram
 
 ## 5. State Management & Storage Schema
 
-Slide decks are stored locally in Chrome's sandboxed storage (`chrome.storage.local`). To preserve full native capture resolution without requesting elevated permissions (such as `unlimitedStorage`), the extension employs an active-deck storage model.
+Slide decks are stored locally in the browser's high-capacity sandboxed IndexedDB database (`YTSnipDB`). This provides extensive storage capacity (100+ MB per origin) with **zero extra permissions** in `manifest.json`, supporting concurrent multi-tab presentation workflows without quota limitations.
 
-### Storage Key Format
-- `ytsnip_deck_<VIDEO_ID>`: Slide deck data for the currently active YouTube video.
-- `ytsnip_capture_mode`: Persistent capture mode preference (`'final_only'` | `'all_steps'`).
+### Storage Architecture (`DeckStorage`)
+- **Database Name**: `YTSnipDB` (Version `1`)
+- **Primary Object Store**: `decks`
+  - **Key Path**: `videoId` (string, e.g. `"dQw4w9WgXcQ"`)
+  - **Index**: `updatedAt` (ascending timestamp index for LRU queries)
+- **Preferences**: Small UI preferences (e.g. `ytsnip_capture_mode`) persist via `chrome.storage.local`.
 
-### Storage Optimization & Lifecycle Architecture
-1. **Single Active Video Deck Management & Pruning**:
-   - When saving slides for the active video (`_saveSlides()`), previous video deck keys (`ytsnip_deck_*`) are automatically pruned from `chrome.storage.local`.
-   - Clearing the deck (`clearAll()`) removes the key from storage via `chrome.storage.local.remove`.
-2. **Native Full-Resolution Capture**:
-   - Captured frames retain 100% of the player's native resolution (`video.videoWidth` × `video.videoHeight`) and full visual fidelity (JPEG quality `0.92`).
-3. **Async Race Safety & Generation Tracking**:
+### Storage Optimization & LRU Eviction Policy
+1. **Multi-Video Concurrent Persistence**:
+   - Multiple YouTube video tabs can be opened, snapped, and refreshed independently without clobbering each other's slide decks.
+2. **Automatic LRU (Least Recently Used) Eviction**:
+   - The database enforces a `MAX_LRU_DECKS` limit (default: 15 active decks).
+   - Whenever a deck is saved or updated, `updatedAt` is refreshed. If total stored video decks exceed the limit, the oldest records by `updatedAt` are automatically pruned to keep disk usage lean.
+3. **Graceful Fallback**:
+   - If IndexedDB is disabled or restricted in a hardened sandbox, the engine automatically falls back to `chrome.storage.local`.
+4. **Async Race Safety & Generation Tracking**:
    - `loadForVideo()` tracks a generation counter (`_loadGeneration`) to discard stale responses during rapid SPA navigations.
    - Any slides snapped in-flight while an asynchronous storage load is pending are automatically preserved and merged rather than overwritten.
-4. **Resilient Video ID Extraction**:
+5. **Resilient Video ID Extraction**:
    - `getVideoId()` supports standard query parameters (`?v=`), Shorts/Live/Embed URL patterns (`/shorts/:id`, `/live/:id`, `/embed/:id`), and YouTube player DOM container attributes (`ytd-watch-flexy[video-id]`).
 
 ### Data Schema (`SlideDeck`)
@@ -388,10 +393,10 @@ interface SlideItem {
   hash?: string;           // 64-bit dHash string
 }
 
-interface SlideDeckStorage {
-  videoId: string;         // YouTube video ID (e.g. "dQw4w9WgXcQ")
+interface SlideDeckRecord {
+  videoId: string;         // YouTube video ID (keyPath, e.g. "dQw4w9WgXcQ")
   videoTitle: string;      // Video title string
-  lastUpdated: number;     // Unix timestamp (ms)
+  updatedAt: number;       // Unix timestamp (ms) for LRU sorting
   slides: SlideItem[];     // Array of captured slides
 }
 ```

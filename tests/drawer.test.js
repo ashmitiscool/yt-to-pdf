@@ -3,6 +3,111 @@ const SlideDrawer = require('../src/content/drawer.js');
 
 console.log('=== Running SlideDrawer Selection Tests ===\n');
 
+// Mock IndexedDB
+const idbStores = {
+  decks: { data: new Map() }
+};
+
+global.indexedDB = {
+  open: (dbName, version) => {
+    const db = {
+      objectStoreNames: {
+        contains: (name) => !!idbStores[name]
+      },
+      createObjectStore: (name) => {
+        if (!idbStores[name]) idbStores[name] = { data: new Map() };
+        return {
+          createIndex: () => {}
+        };
+      },
+      transaction: (storeNames, mode) => {
+        const storeName = Array.isArray(storeNames) ? storeNames[0] : storeNames;
+        const store = idbStores[storeName] || (idbStores[storeName] = { data: new Map() });
+        const tx = {
+          oncomplete: null,
+          onerror: null,
+          objectStore: () => ({
+            get: (key) => {
+              const req = { onsuccess: null, onerror: null, result: store.data.get(key) || null };
+              setTimeout(() => {
+                if (req.onsuccess) req.onsuccess({ target: req });
+              }, 1);
+              return req;
+            },
+            put: (record) => {
+              store.data.set(record.videoId, record);
+              const req = { onsuccess: null, onerror: null };
+              setTimeout(() => {
+                if (req.onsuccess) req.onsuccess({ target: req });
+                if (tx.oncomplete) tx.oncomplete();
+              }, 1);
+              return req;
+            },
+            delete: (key) => {
+              store.data.delete(key);
+              const req = { onsuccess: null, onerror: null };
+              setTimeout(() => {
+                if (req.onsuccess) req.onsuccess({ target: req });
+                if (tx.oncomplete) tx.oncomplete();
+              }, 1);
+              return req;
+            },
+            count: () => {
+              const req = { onsuccess: null, onerror: null, result: store.data.size };
+              setTimeout(() => {
+                if (req.onsuccess) req.onsuccess({ target: req });
+              }, 1);
+              return req;
+            },
+            index: () => ({
+              openCursor: () => {
+                const sorted = Array.from(store.data.values()).sort((a, b) => (a.updatedAt || 0) - (b.updatedAt || 0));
+                let idx = 0;
+                const req = { onsuccess: null, onerror: null };
+                const advance = () => {
+                  if (idx < sorted.length) {
+                    const item = sorted[idx];
+                    const cursor = {
+                      primaryKey: item.videoId,
+                      value: item,
+                      continue: () => {
+                        idx++;
+                        advance();
+                      }
+                    };
+                    req.result = cursor;
+                    setTimeout(() => req.onsuccess && req.onsuccess({ target: req }), 1);
+                  } else {
+                    req.result = null;
+                    setTimeout(() => req.onsuccess && req.onsuccess({ target: req }), 1);
+                  }
+                };
+                setTimeout(advance, 1);
+                return req;
+              }
+            })
+          })
+        };
+        return tx;
+      }
+    };
+
+    const req = {
+      onsuccess: null,
+      onerror: null,
+      onupgradeneeded: null,
+      result: db
+    };
+
+    setTimeout(() => {
+      if (req.onupgradeneeded) req.onupgradeneeded({ target: req });
+      if (req.onsuccess) req.onsuccess({ target: req });
+    }, 1);
+
+    return req;
+  }
+};
+
 // Mock chrome storage
 let storageData = {};
 global.chrome = {
@@ -177,33 +282,67 @@ global.chrome = {
     console.log('✔ Test 10 Passed: Stale loadForVideo does not overwrite newer video deck');
   }
 
-  // Test 11: Single active deck pruning (saving for active video removes old video decks)
+  // Test 11: Multi-video deck persistence (two videos retain their slides concurrently)
   {
-    const pruneDrawer = new SlideDrawer();
-    storageData['ytsnip_deck_old_vid1'] = [{ id: 'old1', timestamp: 1, formattedTime: '00:01', dataUrl: 'data:old1' }];
-    storageData['ytsnip_deck_old_vid2'] = [{ id: 'old2', timestamp: 2, formattedTime: '00:02', dataUrl: 'data:old2' }];
-    storageData['ytsnip_capture_mode'] = 'final_only';
+    const drawer1 = new SlideDrawer();
+    const drawer2 = new SlideDrawer();
 
-    pruneDrawer.videoId = 'active_vid';
-    pruneDrawer.slides = [
-      { id: 'act1', timestamp: 10, formattedTime: '00:10', dataUrl: 'data:act1', selected: true }
-    ];
+    await drawer1.loadForVideo('vid_alpha', 'Video Alpha');
+    drawer1.addSlide({ id: 'a1', timestamp: 10, formattedTime: '00:10', dataUrl: 'data:a1' }, false);
+    await drawer1._saveSlides();
 
-    await pruneDrawer._saveSlides();
+    await drawer2.loadForVideo('vid_beta', 'Video Beta');
+    drawer2.addSlide({ id: 'b1', timestamp: 20, formattedTime: '00:20', dataUrl: 'data:b1' }, false);
+    await drawer2._saveSlides();
 
-    assert.ok(storageData['ytsnip_deck_active_vid'], 'Active video deck must be stored in chrome.storage.local');
-    assert.strictEqual(storageData['ytsnip_deck_old_vid1'], undefined, 'Old video 1 deck must be pruned');
-    assert.strictEqual(storageData['ytsnip_deck_old_vid2'], undefined, 'Old video 2 deck must be pruned');
-    assert.strictEqual(storageData['ytsnip_capture_mode'], 'final_only', 'Non-deck settings like capture_mode must be preserved');
-    console.log('✔ Test 11 Passed: Saving active video deck prunes old video decks');
+    // Reload Video Alpha in a new drawer instance (simulating refresh)
+    const reloadedAlpha = new SlideDrawer();
+    await reloadedAlpha.loadForVideo('vid_alpha', 'Video Alpha');
+
+    assert.strictEqual(reloadedAlpha.slides.length, 1, 'Video Alpha should retain its slide');
+    assert.strictEqual(reloadedAlpha.slides[0].id, 'a1', 'Video Alpha slide ID should be a1');
+
+    // Reload Video Beta
+    const reloadedBeta = new SlideDrawer();
+    await reloadedBeta.loadForVideo('vid_beta', 'Video Beta');
+
+    assert.strictEqual(reloadedBeta.slides.length, 1, 'Video Beta should retain its slide');
+    assert.strictEqual(reloadedBeta.slides[0].id, 'b1', 'Video Beta slide ID should be b1');
+    console.log('✔ Test 11 Passed: Multiple video decks persist concurrently across tabs/refreshes');
   }
 
-  // Test 12: clearAll removes active deck key from storage
+  // Test 12: LRU eviction prunes oldest deck when exceeding MAX_LRU_DECKS (15)
+  {
+    const db = await SlideDrawer.DeckStorage._openDB();
+    const storeMap = idbStores.decks.data;
+    storeMap.clear();
+
+    // Insert 16 decks with sequential timestamps
+    for (let i = 1; i <= 16; i++) {
+      await SlideDrawer.DeckStorage.saveDeck(`lru_vid_${i}`, `Video ${i}`, [
+        { id: `s_${i}`, timestamp: i, formattedTime: `00:${i}`, dataUrl: `data:${i}` }
+      ]);
+      // Artificially space updatedAt timestamps
+      const item = storeMap.get(`lru_vid_${i}`);
+      if (item) item.updatedAt = 1000 + i;
+    }
+
+    // Force prune to 15
+    await SlideDrawer.DeckStorage._pruneLRU(db, 15);
+
+    assert.strictEqual(storeMap.size, 15, 'Storage should contain exactly 15 decks after LRU pruning');
+    assert.strictEqual(storeMap.has('lru_vid_1'), false, 'Oldest deck (lru_vid_1) must be evicted');
+    assert.strictEqual(storeMap.has('lru_vid_16'), true, 'Newest deck (lru_vid_16) must be retained');
+    assert.strictEqual(storeMap.has('lru_vid_2'), true, 'Second oldest deck (lru_vid_2) must be retained');
+    console.log('✔ Test 12 Passed: LRU eviction successfully evicts oldest deck');
+  }
+
+  // Test 13: clearAll cleanly removes active deck from storage
   {
     const clearDrawer = new SlideDrawer();
-    storageData['ytsnip_deck_to_clear'] = [
+    await SlideDrawer.DeckStorage.saveDeck('to_clear', 'To Clear', [
       { id: 'c1', timestamp: 1, formattedTime: '00:01', dataUrl: 'data:c1', selected: true }
-    ];
+    ]);
     await clearDrawer.loadForVideo('to_clear', 'To Clear');
     assert.strictEqual(clearDrawer.slides.length, 1);
 
@@ -211,9 +350,9 @@ global.chrome = {
     assert.strictEqual(clearDrawer.slides.length, 0, 'Slides array should be empty after clearAll');
     
     // Check in storage
-    const stored = storageData['ytsnip_deck_to_clear'];
+    const stored = await SlideDrawer.DeckStorage.getDeck('to_clear');
     assert.ok(!stored || stored.length === 0, 'Storage key must be deleted/cleared on clearAll');
-    console.log('✔ Test 12 Passed: clearAll cleans storage key');
+    console.log('✔ Test 13 Passed: clearAll cleans storage');
   }
 
   console.log('\n✅ All Drawer Selection tests passed successfully!');

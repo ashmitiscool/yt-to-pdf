@@ -21,6 +21,204 @@
     zip: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>`
   };
 
+  const DB_NAME = 'YTSnipDB';
+  const DB_VERSION = 1;
+  const STORE_NAME = 'decks';
+  const MAX_LRU_DECKS = 15; // Retain up to 15 active video decks in storage
+
+  const DeckStorage = {
+    _dbPromise: null,
+
+    _openDB() {
+      if (typeof indexedDB === 'undefined') {
+        return Promise.resolve(null);
+      }
+      if (this._dbPromise) return this._dbPromise;
+
+      this._dbPromise = new Promise((resolve) => {
+        try {
+          const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+          request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+              const store = db.createObjectStore(STORE_NAME, { keyPath: 'videoId' });
+              store.createIndex('updatedAt', 'updatedAt', { unique: false });
+            }
+          };
+
+          request.onsuccess = (event) => {
+            resolve(event.target.result);
+          };
+
+          request.onerror = (event) => {
+            console.warn('IndexedDB open error:', event.target ? event.target.error : event);
+            resolve(null);
+          };
+        } catch (err) {
+          console.warn('IndexedDB initialization error:', err);
+          resolve(null);
+        }
+      });
+
+      return this._dbPromise;
+    },
+
+    async getDeck(videoId) {
+      if (!videoId) return null;
+      const db = await this._openDB();
+      if (!db) {
+        return this._getFallback(videoId);
+      }
+
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction(STORE_NAME, 'readonly');
+          const store = tx.objectStore(STORE_NAME);
+          const request = store.get(videoId);
+
+          request.onsuccess = () => {
+            const result = request.result;
+            if (result && Array.isArray(result.slides)) {
+              resolve(result.slides);
+            } else {
+              this._getFallback(videoId).then(resolve);
+            }
+          };
+
+          request.onerror = () => {
+            this._getFallback(videoId).then(resolve);
+          };
+        } catch (err) {
+          this._getFallback(videoId).then(resolve);
+        }
+      });
+    },
+
+    async saveDeck(videoId, videoTitle, slides) {
+      if (!videoId) return;
+      const db = await this._openDB();
+      if (!db) {
+        return this._saveFallback(videoId, slides);
+      }
+
+      const record = {
+        videoId,
+        videoTitle: videoTitle || '',
+        updatedAt: Date.now(),
+        slides: slides || []
+      };
+
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction(STORE_NAME, 'readwrite');
+          const store = tx.objectStore(STORE_NAME);
+          store.put(record);
+
+          tx.oncomplete = () => {
+            this._pruneLRU(db, MAX_LRU_DECKS).catch(() => {});
+            resolve(true);
+          };
+
+          tx.onerror = async (event) => {
+            console.warn('IndexedDB save error, attempting LRU purge and retry:', event.target ? event.target.error : event);
+            await this._pruneLRU(db, Math.max(3, Math.floor(MAX_LRU_DECKS / 2)));
+            try {
+              const retryTx = db.transaction(STORE_NAME, 'readwrite');
+              retryTx.objectStore(STORE_NAME).put(record);
+              retryTx.oncomplete = () => resolve(true);
+              retryTx.onerror = () => {
+                this._saveFallback(videoId, slides).then(resolve);
+              };
+            } catch (retryErr) {
+              this._saveFallback(videoId, slides).then(resolve);
+            }
+          };
+        } catch (err) {
+          this._saveFallback(videoId, slides).then(resolve);
+        }
+      });
+    },
+
+    async deleteDeck(videoId) {
+      if (!videoId) return;
+      const db = await this._openDB();
+      if (db) {
+        try {
+          const tx = db.transaction(STORE_NAME, 'readwrite');
+          tx.objectStore(STORE_NAME).delete(videoId);
+        } catch (e) {}
+      }
+      if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+        chrome.storage.local.remove([`ytsnip_deck_${videoId}`]).catch(() => {});
+      }
+    },
+
+    async _pruneLRU(db, maxAllowed) {
+      if (!db) return;
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction(STORE_NAME, 'readwrite');
+          const store = tx.objectStore(STORE_NAME);
+          const index = store.index('updatedAt');
+          const countReq = store.count();
+
+          countReq.onsuccess = () => {
+            const count = countReq.result;
+            if (count <= maxAllowed) {
+              resolve();
+              return;
+            }
+
+            const excess = count - maxAllowed;
+            let deleted = 0;
+            // Iterate ascending by updatedAt to delete oldest records
+            const cursorReq = index.openCursor();
+            cursorReq.onsuccess = (e) => {
+              const cursor = e.target.result;
+              if (cursor && deleted < excess) {
+                store.delete(cursor.primaryKey);
+                deleted++;
+                cursor.continue();
+              } else {
+                resolve();
+              }
+            };
+            cursorReq.onerror = () => resolve();
+          };
+
+          countReq.onerror = () => resolve();
+        } catch (e) {
+          resolve();
+        }
+      });
+    },
+
+    async _getFallback(videoId) {
+      if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+        try {
+          const res = await chrome.storage.local.get([`ytsnip_deck_${videoId}`]);
+          return res[`ytsnip_deck_${videoId}`] || null;
+        } catch (e) {
+          return null;
+        }
+      }
+      return null;
+    },
+
+    async _saveFallback(videoId, slides) {
+      if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+        try {
+          await chrome.storage.local.set({ [`ytsnip_deck_${videoId}`]: slides });
+          return true;
+        } catch (e) {
+          return false;
+        }
+      }
+      return false;
+    }
+  };
+
   class SlideDrawer {
     constructor() {
       this.slides = [];
@@ -324,41 +522,41 @@
       if (!videoId) return;
 
       try {
-        if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-          const res = await chrome.storage.local.get([`ytsnip_deck_${videoId}`, 'ytsnip_capture_mode']);
+        const stored = await DeckStorage.getDeck(videoId);
 
-          // Discard stale load if user navigated away or newer load was dispatched
-          if (this._loadGeneration !== currentGen || this.videoId !== videoId) {
-            return;
-          }
+        // Discard stale load if user navigated away or newer load was dispatched
+        if (this._loadGeneration !== currentGen || this.videoId !== videoId) {
+          return;
+        }
 
-          const stored = res[`ytsnip_deck_${videoId}`];
-          const storedSlides = (stored && Array.isArray(stored)) ? stored.map(s => ({
-            ...s,
-            selected: s.selected !== false
-          })) : [];
+        const storedSlides = (stored && Array.isArray(stored)) ? stored.map(s => ({
+          ...s,
+          selected: s.selected !== false
+        })) : [];
 
-          // Preserve and merge any freshly snapped slides added while loadForVideo was in-flight
-          if (this.slides.length > 0) {
-            const existingIds = new Set(storedSlides.map(s => s.id));
-            const inFlightSnaps = this.slides.filter(s => !existingIds.has(s.id));
-            const merged = [...storedSlides];
-            for (const fresh of inFlightSnaps) {
-              const idx = merged.findIndex(s => Math.abs(s.timestamp - fresh.timestamp) < 1.0);
-              if (idx !== -1) {
-                merged[idx] = fresh;
-              } else {
-                merged.push(fresh);
-              }
+        // Preserve and merge any freshly snapped slides added while loadForVideo was in-flight
+        if (this.slides.length > 0) {
+          const existingIds = new Set(storedSlides.map(s => s.id));
+          const inFlightSnaps = this.slides.filter(s => !existingIds.has(s.id));
+          const merged = [...storedSlides];
+          for (const fresh of inFlightSnaps) {
+            const idx = merged.findIndex(s => Math.abs(s.timestamp - fresh.timestamp) < 1.0);
+            if (idx !== -1) {
+              merged[idx] = fresh;
+            } else {
+              merged.push(fresh);
             }
-            merged.sort((a, b) => a.timestamp - b.timestamp);
-            this.slides = merged;
-            this._saveSlides();
-          } else {
-            this.slides = storedSlides;
           }
+          merged.sort((a, b) => a.timestamp - b.timestamp);
+          this.slides = merged;
+          this._saveSlides();
+        } else {
+          this.slides = storedSlides;
+        }
 
-          if (res.ytsnip_capture_mode) {
+        if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+          const res = await chrome.storage.local.get(['ytsnip_capture_mode']);
+          if (res && res.ytsnip_capture_mode) {
             this.captureMode = res.ytsnip_capture_mode;
             const modeSelect = this.drawerEl ? this.drawerEl.querySelector('#ytsnip-mode-select') : null;
             if (modeSelect) modeSelect.value = this.captureMode;
@@ -373,28 +571,10 @@
 
     async _saveSlides() {
       if (!this.videoId) return;
-      if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) return;
-
-      const currentKey = `ytsnip_deck_${this.videoId}`;
-      const dataToSave = this.slides;
-
       try {
-        // Prune any previous video decks so only the active video's deck occupies storage
-        const allItems = await chrome.storage.local.get(null);
-        const keysToRemove = Object.keys(allItems || {}).filter(
-          k => k.startsWith('ytsnip_deck_') && k !== currentKey
-        );
-
-        if (keysToRemove.length > 0) {
-          await chrome.storage.local.remove(keysToRemove);
-        }
-
-        // Save current active video deck
-        await chrome.storage.local.set({
-          [currentKey]: dataToSave
-        });
+        await DeckStorage.saveDeck(this.videoId, this.videoTitle, this.slides);
       } catch (err) {
-        console.warn('Could not save slides to local storage:', err);
+        console.warn('Could not save slides to storage:', err);
       }
     }
 
@@ -503,9 +683,10 @@
     }
 
     clearAll() {
+      const vid = this.videoId;
       this.slides = [];
-      if (this.videoId && typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-        chrome.storage.local.remove([`ytsnip_deck_${this.videoId}`]).catch(() => {});
+      if (vid) {
+        DeckStorage.deleteDeck(vid).catch(() => {});
       }
       this._renderGrid();
       this.showToast('Slide deck cleared');
@@ -802,6 +983,8 @@
       }
     }
   }
+
+  SlideDrawer.DeckStorage = DeckStorage;
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = SlideDrawer;
