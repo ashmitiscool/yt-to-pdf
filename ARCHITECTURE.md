@@ -357,21 +357,33 @@ sequenceDiagram
 
 ## 5. State Management & Storage Schema
 
-Slide decks are stored locally in Chrome's sandboxed storage (`chrome.storage.local`). Each video's deck is partitioned by its unique YouTube video ID.
+Slide decks are stored locally in Chrome's sandboxed storage (`chrome.storage.local`). To preserve full native capture resolution without requesting elevated permissions (such as `unlimitedStorage`), the extension employs an active-deck storage model.
 
 ### Storage Key Format
-- `ytsnip_deck_<VIDEO_ID>`: Slide deck data for a specific YouTube video.
+- `ytsnip_deck_<VIDEO_ID>`: Slide deck data for the currently active YouTube video.
 - `ytsnip_capture_mode`: Persistent capture mode preference (`'final_only'` | `'all_steps'`).
+
+### Storage Optimization & Lifecycle Architecture
+1. **Single Active Video Deck Management & Pruning**:
+   - When saving slides for the active video (`_saveSlides()`), previous video deck keys (`ytsnip_deck_*`) are automatically pruned from `chrome.storage.local`.
+   - Clearing the deck (`clearAll()`) removes the key from storage via `chrome.storage.local.remove`.
+2. **Native Full-Resolution Capture**:
+   - Captured frames retain 100% of the player's native resolution (`video.videoWidth` × `video.videoHeight`) and full visual fidelity (JPEG quality `0.92`).
+3. **Async Race Safety & Generation Tracking**:
+   - `loadForVideo()` tracks a generation counter (`_loadGeneration`) to discard stale responses during rapid SPA navigations.
+   - Any slides snapped in-flight while an asynchronous storage load is pending are automatically preserved and merged rather than overwritten.
+4. **Resilient Video ID Extraction**:
+   - `getVideoId()` supports standard query parameters (`?v=`), Shorts/Live/Embed URL patterns (`/shorts/:id`, `/live/:id`, `/embed/:id`), and YouTube player DOM container attributes (`ytd-watch-flexy[video-id]`).
 
 ### Data Schema (`SlideDeck`)
 ```typescript
 interface SlideItem {
   id: string;              // Unique identifier (e.g. "slide_1719830000000_1")
-  dataUrl: string;         // JPEG Base64 data URL (quality: 0.92)
+  dataUrl: string;         // Full-resolution JPEG Base64 data URL (quality: 0.92)
   timestamp: number;       // Playback time in seconds (e.g. 142.5)
   formattedTime: string;   // Human-readable timestamp (e.g. "02:22")
-  width: number;           // Original capture width in px
-  height: number;          // Original capture height in px
+  width: number;           // Full native capture width in px
+  height: number;          // Full native capture height in px
   selected?: boolean;      // Selection state for selective export (default: true)
   hash?: string;           // 64-bit dHash string
 }

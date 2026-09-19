@@ -35,6 +35,11 @@
     const vWidth = video.videoWidth;
     const vHeight = video.videoHeight;
 
+    let srcX = 0;
+    let srcY = 0;
+    let srcW = vWidth;
+    let srcH = vHeight;
+
     if (cropRect && cropRect.width > 0 && cropRect.height > 0) {
       const sx = Math.floor(cropRect.x * vWidth);
       const sy = Math.floor(cropRect.y * vHeight);
@@ -52,7 +57,7 @@
       ctx.drawImage(video, 0, 0, vWidth, vHeight);
     }
 
-    // JPEG at 0.92 gives excellent presentation slide quality with compact memory size
+    // Retain full native video resolution and quality
     const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
     return {
       dataUrl,

@@ -26,8 +26,24 @@
   }
 
   function getVideoId() {
+    // 1. URL search parameters (?v=...)
     const params = new URLSearchParams(window.location.search);
-    return params.get('v');
+    const v = params.get('v');
+    if (v) return v;
+
+    // 2. Shorts, Live, Embed paths (/shorts/ID, /live/ID, /embed/ID)
+    const pathname = window.location.pathname || '';
+    const match = pathname.match(/\/(shorts|live|embed)\/([a-zA-Z0-9_-]+)/);
+    if (match && match[2]) return match[2];
+
+    // 3. YouTube DOM attributes on player containers
+    const flexy = document.querySelector('ytd-watch-flexy, ytd-watch-grid');
+    if (flexy) {
+      const domVid = flexy.getAttribute('video-id');
+      if (domVid) return domVid;
+    }
+
+    return null;
   }
 
   function getVideoTitle() {
@@ -143,8 +159,15 @@
   function captureCurrentFrame() {
     const video = getVideoElement();
     if (!video || isNaN(video.currentTime)) {
-      drawer.showToast('Video not ready to capture');
+      if (drawer) drawer.showToast('Video not ready to capture');
       return;
+    }
+
+    // Auto-sync active video ID with drawer so snaps are always saved
+    const vId = getVideoId();
+    if (vId && drawer && (!drawer.videoId || drawer.videoId !== vId)) {
+      drawer.videoId = vId;
+      drawer.videoTitle = getVideoTitle();
     }
 
     try {

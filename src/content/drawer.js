@@ -31,6 +31,7 @@
       this.captureMode = 'final_only';
       this.scanInterval = 2;
       this.currentVideoTime = 0;
+      this._loadGeneration = 0;
 
       this.callbacks = {
         onStartScan: () => {},
@@ -311,22 +312,52 @@
     }
 
     async loadForVideo(videoId, videoTitle = '') {
+      const currentGen = ++this._loadGeneration;
+      const isDifferentVideo = this.videoId !== videoId;
       this.videoId = videoId;
       this.videoTitle = videoTitle || (typeof document !== 'undefined' ? document.title.replace(/ - YouTube$/, '') : '') || 'YouTube Presentation';
-      this.slides = [];
+
+      if (isDifferentVideo) {
+        this.slides = [];
+      }
 
       if (!videoId) return;
 
       try {
         if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
           const res = await chrome.storage.local.get([`ytsnip_deck_${videoId}`, 'ytsnip_capture_mode']);
-          const stored = res[`ytsnip_deck_${videoId}`];
-          if (stored && Array.isArray(stored)) {
-            this.slides = stored.map(s => ({
-              ...s,
-              selected: s.selected !== false
-            }));
+
+          // Discard stale load if user navigated away or newer load was dispatched
+          if (this._loadGeneration !== currentGen || this.videoId !== videoId) {
+            return;
           }
+
+          const stored = res[`ytsnip_deck_${videoId}`];
+          const storedSlides = (stored && Array.isArray(stored)) ? stored.map(s => ({
+            ...s,
+            selected: s.selected !== false
+          })) : [];
+
+          // Preserve and merge any freshly snapped slides added while loadForVideo was in-flight
+          if (this.slides.length > 0) {
+            const existingIds = new Set(storedSlides.map(s => s.id));
+            const inFlightSnaps = this.slides.filter(s => !existingIds.has(s.id));
+            const merged = [...storedSlides];
+            for (const fresh of inFlightSnaps) {
+              const idx = merged.findIndex(s => Math.abs(s.timestamp - fresh.timestamp) < 1.0);
+              if (idx !== -1) {
+                merged[idx] = fresh;
+              } else {
+                merged.push(fresh);
+              }
+            }
+            merged.sort((a, b) => a.timestamp - b.timestamp);
+            this.slides = merged;
+            this._saveSlides();
+          } else {
+            this.slides = storedSlides;
+          }
+
           if (res.ytsnip_capture_mode) {
             this.captureMode = res.ytsnip_capture_mode;
             const modeSelect = this.drawerEl ? this.drawerEl.querySelector('#ytsnip-mode-select') : null;
@@ -340,14 +371,28 @@
       this._renderGrid();
     }
 
-    _saveSlides() {
+    async _saveSlides() {
       if (!this.videoId) return;
+      if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) return;
+
+      const currentKey = `ytsnip_deck_${this.videoId}`;
+      const dataToSave = this.slides;
+
       try {
-        if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-          chrome.storage.local.set({
-            [`ytsnip_deck_${this.videoId}`]: this.slides
-          });
+        // Prune any previous video decks so only the active video's deck occupies storage
+        const allItems = await chrome.storage.local.get(null);
+        const keysToRemove = Object.keys(allItems || {}).filter(
+          k => k.startsWith('ytsnip_deck_') && k !== currentKey
+        );
+
+        if (keysToRemove.length > 0) {
+          await chrome.storage.local.remove(keysToRemove);
         }
+
+        // Save current active video deck
+        await chrome.storage.local.set({
+          [currentKey]: dataToSave
+        });
       } catch (err) {
         console.warn('Could not save slides to local storage:', err);
       }
@@ -459,7 +504,9 @@
 
     clearAll() {
       this.slides = [];
-      this._saveSlides();
+      if (this.videoId && typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+        chrome.storage.local.remove([`ytsnip_deck_${this.videoId}`]).catch(() => {});
+      }
       this._renderGrid();
       this.showToast('Slide deck cleared');
     }
