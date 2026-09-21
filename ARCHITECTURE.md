@@ -108,7 +108,8 @@ yt_to_ppt/
 │
 ├── dist/                          # Production distribution builds (.zip packages)
 │   ├── yt-to-pdf-v1.0.0.zip
-│   └── yt-to-pdf-v1.0.1.zip
+│   ├── yt-to-pdf-v1.0.1.zip
+│   └── yt-to-pdf-v1.0.2.zip
 │
 ├── icons/                         # Extension icons in standard resolutions
 │   ├── icon16.png                 # 16x16 icon (favicon / context menus)

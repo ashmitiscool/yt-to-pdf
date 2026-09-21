@@ -636,13 +636,10 @@
         return;
       }
       const existing = this.slides[index];
-      const mergedSlide = {
-        ...existing,
-        ...slide,
+      Object.assign(existing, slide, {
         id: existing.id,
         selected: existing.selected !== false
-      };
-      this.slides[index] = mergedSlide;
+      });
       this._saveSlides();
 
       // Update DOM card directly without full re-render
@@ -888,8 +885,9 @@
         if (jumpBtn) {
           jumpBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            this.callbacks.onSeekVideo(slide.timestamp);
-            this.showToast(`Jumped to ${slide.formattedTime}`);
+            const currentSlide = this.slides.find(s => s.id === slide.id) || slide;
+            this.callbacks.onSeekVideo(currentSlide.timestamp);
+            this.showToast(`Jumped to ${currentSlide.formattedTime}`);
           });
         }
 
@@ -909,7 +907,8 @@
             e.stopPropagation();
             const exporter = global.SlideExporter || (typeof window !== 'undefined' ? window.SlideExporter : null);
             if (exporter) {
-              const ok = await exporter.copySlideToClipboard(slide.dataUrl);
+              const currentSlide = this.slides.find(s => s.id === slide.id) || slide;
+              const ok = await exporter.copySlideToClipboard(currentSlide.dataUrl);
               if (ok) this.showToast('Copied to clipboard', 1500, true);
               else this.showToast('Could not copy slide', 2000, true);
             }

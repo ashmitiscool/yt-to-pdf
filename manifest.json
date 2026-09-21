@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "YT to PDF",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Extract presentation slides from YouTube videos and export them to PowerPoint (PPTX), PDF, or images with one click.",
   "permissions": [
     "storage"
