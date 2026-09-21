@@ -878,7 +878,7 @@
             if (e.target.closest('.ytsnip-card-select-toggle')) return;
             // Only open lightbox if not dragging
             if (!card.classList.contains('ytsnip-dragging')) {
-              this._showLightbox(slide.dataUrl);
+              this._showLightbox(index);
             }
           });
         }
@@ -929,17 +929,79 @@
       });
     }
 
-    _showLightbox(dataUrl) {
+    _showLightbox(startIndex = 0) {
       if (typeof document === 'undefined') return;
+
+      let targetIndex = 0;
+      if (typeof startIndex === 'number') {
+        targetIndex = Math.max(0, Math.min(startIndex, this.slides.length - 1));
+      } else if (typeof startIndex === 'string') {
+        const found = this.slides.findIndex(s => s.dataUrl === startIndex || s.id === startIndex);
+        if (found !== -1) targetIndex = found;
+      }
+
       const box = document.createElement('div');
       box.className = 'ytsnip-lightbox';
-      box.innerHTML = `<img src="${dataUrl}" alt="Zoomed Slide" />`;
-      box.addEventListener('click', () => {
+
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'ytsnip-lightbox-close';
+      closeBtn.setAttribute('title', 'Close Preview (Esc)');
+      closeBtn.innerHTML = ICONS.close;
+      box.appendChild(closeBtn);
+
+      const slidesToRender = this.slides.length > 0
+        ? this.slides
+        : (typeof startIndex === 'string' ? [{ dataUrl: startIndex }] : []);
+
+      slidesToRender.forEach((slide, idx) => {
+        const img = document.createElement('img');
+        img.className = 'ytsnip-lightbox-img';
+        img.src = slide.dataUrl;
+        img.alt = `Slide ${idx + 1}`;
+        img.dataset.slideIndex = idx;
+        box.appendChild(img);
+      });
+
+      const closeLightbox = () => {
+        document.removeEventListener('keydown', onKeyDown);
         if (box.parentNode) {
           box.parentNode.removeChild(box);
         }
+      };
+
+      const onKeyDown = (e) => {
+        if (e.key === 'Escape' || e.key === 'Esc') {
+          e.preventDefault();
+          closeLightbox();
+        }
+      };
+
+      closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeLightbox();
       });
+
+      box.addEventListener('click', (e) => {
+        if (e.target === box) {
+          closeLightbox();
+        }
+      });
+
+      document.addEventListener('keydown', onKeyDown);
       document.body.appendChild(box);
+
+      const targetImg = box.querySelector(`img[data-slide-index="${targetIndex}"]`);
+      if (targetImg) {
+        if (typeof requestAnimationFrame !== 'undefined') {
+          requestAnimationFrame(() => {
+            if (typeof targetImg.scrollIntoView === 'function') {
+              targetImg.scrollIntoView({ behavior: 'auto', block: 'center' });
+            }
+          });
+        } else if (typeof targetImg.scrollIntoView === 'function') {
+          targetImg.scrollIntoView({ behavior: 'auto', block: 'center' });
+        }
+      }
     }
 
     async exportDeck(type) {

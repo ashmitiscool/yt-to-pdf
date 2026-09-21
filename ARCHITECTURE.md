@@ -199,7 +199,7 @@ yt_to_ppt/
   - **In-Place Live Card Updating (`updateSlide`)**: Replaces the active slide thumbnail, timestamp, and metadata in-place during incremental updates without resetting scroll position or re-rendering the entire grid.
   - **Capture Mode Configuration**: Allows toggling between `Final Slides Only (Clean)` and `All Steps (Incremental)` directly in the Options Ribbon with automatic persistence in `chrome.storage.local`.
   - **Dual Scan Action Triggers**: Provides dedicated **Scan All (0:00)** and dynamic **From Current (XX:XX)** action buttons directly in the options ribbon, updating live with video playback.
-  - **Selective Export Curation**: Individual slide selection toggle checkboxes with dimmed/dashed visual excluded state, plus one-click **Select All** and **Deselect All** bulk actions.
+  - **Continuous Scrollable Slide Deck Preview (`_showLightbox`)**: Clicking any slide thumbnail opens a full-screen, vertically scrollable image preview of all slides in the deck, automatically scrolling to and centering the clicked slide index with square corners, clean borderless presentation, and multi-mode dismissal (backdrop click, top-right close button, or <kbd>Esc</kbd> key).
   - **Timestamp Navigation**: Clicking on a thumbnail jumps the YouTube video directly to that moment.
   - **Slide Deck Curation**: Reorder via drag-and-drop, delete unwanted frames, copy slide images directly to the system clipboard, or duplicate slides.
   - **Scan Controls & Preferences**: Sensitivity picker, capture mode picker, scan step interval selector, and optional bounding-box cropping.

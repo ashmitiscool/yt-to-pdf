@@ -355,5 +355,124 @@ global.chrome = {
     console.log('✔ Test 13 Passed: clearAll cleans storage');
   }
 
+  // Test 14: _showLightbox builds full deck scrollable image list and scrolls to target index
+  {
+    const previewDrawer = new SlideDrawer();
+    previewDrawer.slides = [
+      { id: 's1', timestamp: 10, formattedTime: '00:10', dataUrl: 'data:img1' },
+      { id: 's2', timestamp: 20, formattedTime: '00:20', dataUrl: 'data:img2' },
+      { id: 's3', timestamp: 30, formattedTime: '00:30', dataUrl: 'data:img3' }
+    ];
+
+    const eventListeners = {};
+    let scrolledTarget = null;
+
+    global.document = {
+      createElement: (tag) => {
+        const el = {
+          tagName: tag.toUpperCase(),
+          className: '',
+          children: [],
+          dataset: {},
+          attributes: {},
+          setAttribute: (k, v) => { el.attributes[k] = v; },
+          appendChild: (child) => {
+            el.children.push(child);
+            child.parentNode = el;
+          },
+          removeChild: (child) => {
+            const i = el.children.indexOf(child);
+            if (i !== -1) el.children.splice(i, 1);
+            child.parentNode = null;
+          },
+          listeners: {},
+          addEventListener: (evt, handler) => {
+            if (!el.listeners[evt]) el.listeners[evt] = [];
+            el.listeners[evt].push(handler);
+          },
+          dispatchEvent: (evt) => {
+            const handlers = el.listeners[evt.type] || [];
+            handlers.forEach(h => h(evt));
+          },
+          querySelector: (selector) => {
+            if (selector.startsWith('img[data-slide-index="')) {
+              const match = selector.match(/data-slide-index="(\d+)"/);
+              const idx = parseInt(match[1], 10);
+              return el.children.find(c => c.tagName === 'IMG' && c.dataset.slideIndex === idx) || null;
+            }
+            return null;
+          },
+          scrollIntoView: function(opts) {
+            scrolledTarget = this;
+          }
+        };
+        return el;
+      },
+      body: {
+        children: [],
+        appendChild: (child) => {
+          global.document.body.children.push(child);
+          child.parentNode = global.document.body;
+        },
+        removeChild: (child) => {
+          const i = global.document.body.children.indexOf(child);
+          if (i !== -1) global.document.body.children.splice(i, 1);
+          child.parentNode = null;
+        }
+      },
+      addEventListener: (evt, handler) => {
+        if (!eventListeners[evt]) eventListeners[evt] = [];
+        eventListeners[evt].push(handler);
+      },
+      removeEventListener: (evt, handler) => {
+        if (eventListeners[evt]) {
+          eventListeners[evt] = eventListeners[evt].filter(h => h !== handler);
+        }
+      }
+    };
+
+    // Open lightbox starting at index 2 (slide 3)
+    previewDrawer._showLightbox(2);
+
+    const lightbox = global.document.body.children.find(c => c.className === 'ytsnip-lightbox');
+    assert.ok(lightbox, 'Lightbox element must be appended to body');
+
+    const images = lightbox.children.filter(c => c.tagName === 'IMG');
+    assert.strictEqual(images.length, 3, 'All 3 slide images should be rendered in lightbox');
+    assert.strictEqual(images[0].src, 'data:img1');
+    assert.strictEqual(images[2].src, 'data:img3');
+    assert.strictEqual(images[2].dataset.slideIndex, 2);
+
+    assert.strictEqual(scrolledTarget, images[2], 'Target slide (index 2) must be scrolled into view');
+
+    // Test close via Escape key
+    assert.ok(eventListeners['keydown'].length > 0, 'Keydown listener should be registered');
+    const escEvent = { key: 'Escape', preventDefault: () => {} };
+    eventListeners['keydown'][0](escEvent);
+
+    assert.strictEqual(global.document.body.children.includes(lightbox), false, 'Lightbox should be removed on Escape key');
+    assert.strictEqual(eventListeners['keydown'].length, 0, 'Keydown listener should be cleaned up on close');
+
+    // Test close via close button click
+    previewDrawer._showLightbox(1);
+    const newLightbox = global.document.body.children.find(c => c.className === 'ytsnip-lightbox');
+    const closeBtn = newLightbox.children.find(c => c.className === 'ytsnip-lightbox-close');
+    assert.ok(closeBtn, 'Close button should be present in lightbox');
+
+    let stopPropagated = false;
+    closeBtn.dispatchEvent({ type: 'click', stopPropagation: () => { stopPropagated = true; } });
+    assert.strictEqual(global.document.body.children.includes(newLightbox), false, 'Lightbox should be removed on close button click');
+
+    // Test close via backdrop click
+    previewDrawer._showLightbox(0);
+    const backdropLightbox = global.document.body.children.find(c => c.className === 'ytsnip-lightbox');
+    backdropLightbox.dispatchEvent({ type: 'click', target: backdropLightbox });
+    assert.strictEqual(global.document.body.children.includes(backdropLightbox), false, 'Lightbox should be removed on clicking backdrop');
+
+    // Cleanup global document
+    delete global.document;
+    console.log('✔ Test 14 Passed: _showLightbox renders all slides, scrolls to index, and handles all dismissal methods');
+  }
+
   console.log('\n✅ All Drawer Selection tests passed successfully!');
 })();
