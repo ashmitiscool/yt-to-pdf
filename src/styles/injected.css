@@ -789,20 +789,21 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.92);
+  background: rgba(0, 0, 0, 0.94);
   z-index: 9999999;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 48px 24px;
+  padding: 72px 24px 48px;
   box-sizing: border-box;
   cursor: default;
 }
 
 .ytsnip-lightbox::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 
 .ytsnip-lightbox::-webkit-scrollbar-track {
@@ -816,6 +817,126 @@
 
 .ytsnip-lightbox::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.35);
+}
+
+/* Floating Toolbar (Google Drive / PDF Viewer style) */
+.ytsnip-lightbox-toolbar {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(26, 26, 26, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 30px;
+  padding: 4px 10px;
+  z-index: 10000000;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+  user-select: none;
+  font-family: inherit;
+}
+
+.ytsnip-lightbox-nav,
+.ytsnip-lightbox-zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ytsnip-lightbox-divider {
+  width: 1px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.18);
+  margin: 0 4px;
+}
+
+.ytsnip-lightbox-btn {
+  background: transparent;
+  border: none;
+  color: #e0e0e0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+  padding: 0;
+  outline: none;
+}
+
+.ytsnip-lightbox-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.ytsnip-lightbox-btn:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.ytsnip-lightbox-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.ytsnip-lightbox-btn svg {
+  width: 16px !important;
+  height: 16px !important;
+  stroke: currentColor;
+  stroke-width: 2.2;
+}
+
+.ytsnip-lightbox-zoom-label {
+  width: auto;
+  min-width: 48px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.ytsnip-lightbox-page-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #ffffff;
+  font-weight: 500;
+  padding: 0 2px;
+}
+
+.ytsnip-lightbox-page-input {
+  width: 32px;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 4px;
+  color: #ffffff;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  outline: none;
+  padding: 0 2px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.ytsnip-lightbox-page-input:focus {
+  border-color: #ff0033;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.ytsnip-lightbox-page-total {
+  font-size: 12px;
+  color: #888888;
+  font-weight: 500;
+  margin-right: 2px;
 }
 
 .ytsnip-lightbox-close {
@@ -849,16 +970,23 @@
   stroke: currentColor;
 }
 
+.ytsnip-lightbox-slides-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  min-height: 100%;
+}
+
 .ytsnip-lightbox-img {
-  max-width: 92vw;
-  max-height: 88vh;
-  width: auto;
+  width: calc(min(92vw, 1200px) * var(--ytsnip-zoom, 1));
+  max-width: none;
   height: auto;
   object-fit: contain;
   margin-bottom: 32px;
   border-radius: 0 !important;
   border: none !important;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.85);
   display: block;
   flex-shrink: 0;
   user-select: none;

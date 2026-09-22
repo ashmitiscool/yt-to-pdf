@@ -18,7 +18,11 @@
     pptx: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>`,
     pdf: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="9" y1="15" x2="15" y2="15"></line></svg>`,
     print: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>`,
-    zip: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>`
+    zip: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>`,
+    zoomIn: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>`,
+    zoomOut: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>`,
+    prev: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>`,
+    next: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`
   };
 
   const DB_NAME = 'YTSnipDB';
@@ -939,8 +943,48 @@
         if (found !== -1) targetIndex = found;
       }
 
+      const slidesToRender = this.slides.length > 0
+        ? this.slides
+        : (typeof startIndex === 'string' ? [{ dataUrl: startIndex }] : []);
+      const totalPages = Math.max(1, slidesToRender.length);
+
       const box = document.createElement('div');
       box.className = 'ytsnip-lightbox';
+
+      // Floating toolbar (Google Drive / PDF Viewer style)
+      const toolbar = document.createElement('div');
+      toolbar.className = 'ytsnip-lightbox-toolbar';
+      toolbar.innerHTML = `
+        <div class="ytsnip-lightbox-nav">
+          <button class="ytsnip-lightbox-btn ytsnip-lightbox-prev-btn" title="Previous Slide (Left Arrow / Up Arrow)">
+            ${ICONS.prev}
+          </button>
+          <div class="ytsnip-lightbox-page-indicator">
+            <input type="text" class="ytsnip-lightbox-page-input" value="${targetIndex + 1}" aria-label="Current slide number" />
+            <span class="ytsnip-lightbox-page-total">/ ${totalPages}</span>
+          </div>
+          <button class="ytsnip-lightbox-btn ytsnip-lightbox-next-btn" title="Next Slide (Right Arrow / Down Arrow)">
+            ${ICONS.next}
+          </button>
+        </div>
+        <div class="ytsnip-lightbox-divider"></div>
+        <div class="ytsnip-lightbox-zoom-controls">
+          <button class="ytsnip-lightbox-btn ytsnip-lightbox-zoom-out" title="Zoom Out (-)">
+            ${ICONS.zoomOut}
+          </button>
+          <button class="ytsnip-lightbox-btn ytsnip-lightbox-zoom-label" title="Reset Zoom to 100% (0)">
+            100%
+          </button>
+          <button class="ytsnip-lightbox-btn ytsnip-lightbox-zoom-in" title="Zoom In (+)">
+            ${ICONS.zoomIn}
+          </button>
+        </div>
+        <div class="ytsnip-lightbox-divider"></div>
+        <button class="ytsnip-lightbox-btn ytsnip-lightbox-close-btn" title="Close Preview (Esc)">
+          ${ICONS.close}
+        </button>
+      `;
+      box.appendChild(toolbar);
 
       const closeBtn = document.createElement('button');
       closeBtn.className = 'ytsnip-lightbox-close';
@@ -948,9 +992,8 @@
       closeBtn.innerHTML = ICONS.close;
       box.appendChild(closeBtn);
 
-      const slidesToRender = this.slides.length > 0
-        ? this.slides
-        : (typeof startIndex === 'string' ? [{ dataUrl: startIndex }] : []);
+      const wrapper = document.createElement('div');
+      wrapper.className = 'ytsnip-lightbox-slides-wrapper';
 
       slidesToRender.forEach((slide, idx) => {
         const img = document.createElement('img');
@@ -958,11 +1001,220 @@
         img.src = slide.dataUrl;
         img.alt = `Slide ${idx + 1}`;
         img.dataset.slideIndex = idx;
-        box.appendChild(img);
+        wrapper.appendChild(img);
       });
+      box.appendChild(wrapper);
+
+      const prevBtn = toolbar.querySelector('.ytsnip-lightbox-prev-btn');
+      const nextBtn = toolbar.querySelector('.ytsnip-lightbox-next-btn');
+      const pageInput = toolbar.querySelector('.ytsnip-lightbox-page-input');
+      const zoomOutBtn = toolbar.querySelector('.ytsnip-lightbox-zoom-out');
+      const zoomInBtn = toolbar.querySelector('.ytsnip-lightbox-zoom-in');
+      const zoomLabel = toolbar.querySelector('.ytsnip-lightbox-zoom-label');
+      const toolbarCloseBtn = toolbar.querySelector('.ytsnip-lightbox-close-btn');
+
+      let currentSlideIndex = targetIndex;
+      let scale = 1.0;
+      let isProgrammaticScroll = false;
+      let programmaticScrollTimer = null;
+
+      const updateNavButtons = () => {
+        if (prevBtn) prevBtn.disabled = currentSlideIndex <= 0;
+        if (nextBtn) nextBtn.disabled = currentSlideIndex >= totalPages - 1;
+      };
+      updateNavButtons();
+
+      const setZoom = (newScale) => {
+        scale = Math.max(0.25, Math.min(4.0, Math.round(newScale * 100) / 100));
+        if (zoomLabel) zoomLabel.textContent = `${Math.round(scale * 100)}%`;
+        if (zoomOutBtn) zoomOutBtn.disabled = scale <= 0.25;
+        if (zoomInBtn) zoomInBtn.disabled = scale >= 4.0;
+        if (box.style && typeof box.style.setProperty === 'function') {
+          box.style.setProperty('--ytsnip-zoom', String(scale));
+        }
+        const imgs = box.querySelectorAll ? box.querySelectorAll('.ytsnip-lightbox-img') : wrapper.children;
+        if (imgs) {
+          for (let i = 0; i < imgs.length; i++) {
+            const img = imgs[i];
+            if (img && img.style) {
+              img.style.width = `calc(min(92vw, 1200px) * ${scale})`;
+            }
+          }
+        }
+
+        // Keep the active slide centered in view so zoom out/in doesn't drift
+        const activeImg = box.querySelector ? box.querySelector(`img[data-slide-index="${currentSlideIndex}"]`) : null;
+        if (activeImg && typeof activeImg.scrollIntoView === 'function') {
+          activeImg.scrollIntoView({ behavior: 'auto', block: 'center' });
+        }
+      };
+
+      const goToSlide = (idx, smooth = true) => {
+        const clamped = Math.max(0, Math.min(idx, totalPages - 1));
+        currentSlideIndex = clamped;
+        if (pageInput) pageInput.value = String(clamped + 1);
+        updateNavButtons();
+
+        const targetImg = box.querySelector ? box.querySelector(`img[data-slide-index="${clamped}"]`) : null;
+        if (targetImg) {
+          isProgrammaticScroll = true;
+          if (programmaticScrollTimer) clearTimeout(programmaticScrollTimer);
+          programmaticScrollTimer = setTimeout(() => {
+            isProgrammaticScroll = false;
+          }, 600);
+
+          if (typeof targetImg.scrollIntoView === 'function') {
+            targetImg.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'center' });
+          }
+        }
+      };
+
+      if (prevBtn) {
+        prevBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          goToSlide(currentSlideIndex - 1);
+        });
+      }
+      if (nextBtn) {
+        nextBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          goToSlide(currentSlideIndex + 1);
+        });
+      }
+      if (zoomInBtn) {
+        zoomInBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          setZoom(scale + 0.25);
+        });
+      }
+      if (zoomOutBtn) {
+        zoomOutBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          setZoom(scale - 0.25);
+        });
+      }
+      if (zoomLabel) {
+        zoomLabel.addEventListener('click', (e) => {
+          e.stopPropagation();
+          setZoom(1.0);
+        });
+      }
+      if (pageInput) {
+        pageInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const val = parseInt(pageInput.value, 10);
+            if (!isNaN(val)) goToSlide(val - 1);
+          }
+        });
+        pageInput.addEventListener('change', () => {
+          const val = parseInt(pageInput.value, 10);
+          if (!isNaN(val)) goToSlide(val - 1);
+          else pageInput.value = String(currentSlideIndex + 1);
+        });
+        pageInput.addEventListener('click', (e) => {
+          e.stopPropagation();
+        });
+      }
+
+      const onWheel = (e) => {
+        if (e.ctrlKey || e.metaKey) {
+          if (typeof e.preventDefault === 'function') e.preventDefault();
+          const zoomDelta = e.deltaY < 0 ? 0.1 : -0.1;
+          setZoom(scale + zoomDelta);
+        } else {
+          isProgrammaticScroll = false;
+        }
+      };
+      box.addEventListener('wheel', onWheel, { passive: false });
+      box.addEventListener('mousedown', () => { isProgrammaticScroll = false; });
+
+      let initialTouchDist = null;
+      let initialTouchScale = 1.0;
+      const onTouchStart = (e) => {
+        isProgrammaticScroll = false;
+        if (e.touches && e.touches.length === 2) {
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          initialTouchDist = Math.hypot(dx, dy);
+          initialTouchScale = scale;
+        }
+      };
+      const onTouchMove = (e) => {
+        if (e.touches && e.touches.length === 2 && initialTouchDist) {
+          if (typeof e.preventDefault === 'function') e.preventDefault();
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          const currentDist = Math.hypot(dx, dy);
+          const factor = currentDist / initialTouchDist;
+          setZoom(initialTouchScale * factor);
+        }
+      };
+      const onTouchEnd = (e) => {
+        if (!e.touches || e.touches.length < 2) {
+          initialTouchDist = null;
+        }
+      };
+      box.addEventListener('touchstart', onTouchStart, { passive: true });
+      box.addEventListener('touchmove', onTouchMove, { passive: false });
+      box.addEventListener('touchend', onTouchEnd, { passive: true });
+
+      let scrollDebounceTimer = null;
+      const onScroll = () => {
+        if (isProgrammaticScroll) return;
+        if (scrollDebounceTimer) return;
+        scrollDebounceTimer = setTimeout(() => {
+          scrollDebounceTimer = null;
+          if (isProgrammaticScroll) return;
+          if (!box || !box.parentNode || typeof box.getBoundingClientRect !== 'function') return;
+          const boxRect = box.getBoundingClientRect();
+          const boxCenterY = boxRect.top + boxRect.height / 2;
+          const imgs = box.querySelectorAll ? box.querySelectorAll('.ytsnip-lightbox-img') : wrapper.children;
+          if (!imgs || imgs.length === 0) return;
+
+          let closestIdx = currentSlideIndex;
+          let minDistance = Infinity;
+
+          for (let i = 0; i < imgs.length; i++) {
+            const img = imgs[i];
+            if (img && typeof img.getBoundingClientRect === 'function') {
+              const rect = img.getBoundingClientRect();
+              const imgCenterY = rect.top + rect.height / 2;
+              const dist = Math.abs(imgCenterY - boxCenterY);
+              if (dist < minDistance) {
+                minDistance = dist;
+                const idxVal = img.dataset && img.dataset.slideIndex !== undefined
+                  ? parseInt(img.dataset.slideIndex, 10)
+                  : i;
+                closestIdx = idxVal;
+              }
+            }
+          }
+
+          if (!isNaN(closestIdx) && closestIdx !== currentSlideIndex) {
+            currentSlideIndex = closestIdx;
+            if (pageInput && typeof document !== 'undefined' && document.activeElement !== pageInput) {
+              pageInput.value = String(currentSlideIndex + 1);
+            }
+            updateNavButtons();
+          }
+        }, 50);
+      };
+      box.addEventListener('scroll', onScroll, { passive: true });
 
       const closeLightbox = () => {
-        document.removeEventListener('keydown', onKeyDown);
+        if (programmaticScrollTimer) {
+          clearTimeout(programmaticScrollTimer);
+          programmaticScrollTimer = null;
+        }
+        if (typeof document !== 'undefined') {
+          document.removeEventListener('keydown', onKeyDown);
+        }
+        box.removeEventListener('wheel', onWheel);
+        box.removeEventListener('scroll', onScroll);
+        box.removeEventListener('touchstart', onTouchStart);
+        box.removeEventListener('touchmove', onTouchMove);
+        box.removeEventListener('touchend', onTouchEnd);
         if (box.parentNode) {
           box.parentNode.removeChild(box);
         }
@@ -970,37 +1222,65 @@
 
       const onKeyDown = (e) => {
         if (e.key === 'Escape' || e.key === 'Esc') {
-          e.preventDefault();
+          if (typeof e.preventDefault === 'function') e.preventDefault();
           closeLightbox();
+        } else if (e.key === '+' || e.key === '=' || (e.ctrlKey && (e.key === '+' || e.key === '='))) {
+          if (typeof e.preventDefault === 'function') e.preventDefault();
+          setZoom(scale + 0.25);
+        } else if (e.key === '-' || e.key === '_' || (e.ctrlKey && e.key === '-')) {
+          if (typeof e.preventDefault === 'function') e.preventDefault();
+          setZoom(scale - 0.25);
+        } else if (e.key === '0' || (e.ctrlKey && e.key === '0')) {
+          if (typeof e.preventDefault === 'function') e.preventDefault();
+          setZoom(1.0);
+        } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft' || e.key === 'PageUp') {
+          if (typeof document !== 'undefined' && document.activeElement !== pageInput) {
+            if (typeof e.preventDefault === 'function') e.preventDefault();
+            goToSlide(currentSlideIndex - 1);
+          }
+        } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight' || e.key === 'PageDown') {
+          if (typeof document !== 'undefined' && document.activeElement !== pageInput) {
+            if (typeof e.preventDefault === 'function') e.preventDefault();
+            goToSlide(currentSlideIndex + 1);
+          }
+        } else if (e.key === 'Home') {
+          if (typeof document !== 'undefined' && document.activeElement !== pageInput) {
+            if (typeof e.preventDefault === 'function') e.preventDefault();
+            goToSlide(0);
+          }
+        } else if (e.key === 'End') {
+          if (typeof document !== 'undefined' && document.activeElement !== pageInput) {
+            if (typeof e.preventDefault === 'function') e.preventDefault();
+            goToSlide(totalPages - 1);
+          }
         }
       };
 
-      closeBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        closeLightbox();
-      });
+      if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          closeLightbox();
+        });
+      }
+      if (toolbarCloseBtn) {
+        toolbarCloseBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          closeLightbox();
+        });
+      }
 
       box.addEventListener('click', (e) => {
-        if (e.target === box) {
+        if (e.target === box || e.target === wrapper) {
           closeLightbox();
         }
       });
 
-      document.addEventListener('keydown', onKeyDown);
-      document.body.appendChild(box);
-
-      const targetImg = box.querySelector(`img[data-slide-index="${targetIndex}"]`);
-      if (targetImg) {
-        if (typeof requestAnimationFrame !== 'undefined') {
-          requestAnimationFrame(() => {
-            if (typeof targetImg.scrollIntoView === 'function') {
-              targetImg.scrollIntoView({ behavior: 'auto', block: 'center' });
-            }
-          });
-        } else if (typeof targetImg.scrollIntoView === 'function') {
-          targetImg.scrollIntoView({ behavior: 'auto', block: 'center' });
-        }
+      if (typeof document !== 'undefined') {
+        document.addEventListener('keydown', onKeyDown);
+        document.body.appendChild(box);
       }
+
+      goToSlide(targetIndex);
     }
 
     async exportDeck(type) {

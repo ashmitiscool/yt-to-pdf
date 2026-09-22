@@ -355,7 +355,7 @@ global.chrome = {
     console.log('✔ Test 13 Passed: clearAll cleans storage');
   }
 
-  // Test 14: _showLightbox builds full deck scrollable image list and scrolls to target index
+  // Test 14: _showLightbox builds full deck scrollable image list, floating toolbar, and scrolls to target index
   {
     const previewDrawer = new SlideDrawer();
     previewDrawer.slides = [
@@ -364,62 +364,171 @@ global.chrome = {
       { id: 's3', timestamp: 30, formattedTime: '00:30', dataUrl: 'data:img3' }
     ];
 
-    const eventListeners = {};
     let scrolledTarget = null;
+    const eventListeners = {};
+
+    function createMockElement(tag) {
+      let innerHtmlVal = '';
+      const el = {
+        tagName: (tag || 'DIV').toUpperCase(),
+        className: '',
+        children: [],
+        parentNode: null,
+        dataset: {},
+        attributes: {},
+        style: {
+          _styles: {},
+          setProperty(k, v) { this._styles[k] = v; },
+          getPropertyValue(k) { return this._styles[k]; }
+        },
+        classList: {
+          _classes: new Set(),
+          add(...cls) { cls.forEach(c => this._classes.add(c)); },
+          remove(...cls) { cls.forEach(c => this._classes.delete(c)); },
+          contains(c) { return this._classes.has(c) || el.className.split(/\s+/).includes(c); }
+        },
+        setAttribute(k, v) { this.attributes[k] = v; },
+        getAttribute(k) { return this.attributes[k]; },
+        appendChild(child) {
+          if (child.parentNode) child.parentNode.removeChild(child);
+          this.children.push(child);
+          child.parentNode = this;
+          return child;
+        },
+        removeChild(child) {
+          const idx = this.children.indexOf(child);
+          if (idx !== -1) this.children.splice(idx, 1);
+          child.parentNode = null;
+          return child;
+        },
+        listeners: {},
+        addEventListener(evt, handler) {
+          if (!this.listeners[evt]) this.listeners[evt] = [];
+          this.listeners[evt].push(handler);
+        },
+        removeEventListener(evt, handler) {
+          if (this.listeners[evt]) {
+            this.listeners[evt] = this.listeners[evt].filter(h => h !== handler);
+          }
+        },
+        dispatchEvent(evt) {
+          const handlers = this.listeners[evt.type] || [];
+          handlers.forEach(h => h(evt));
+        },
+        getBoundingClientRect() {
+          return { top: 0, left: 0, width: 800, height: 600, bottom: 600, right: 800 };
+        },
+        scrollIntoView(opts) {
+          scrolledTarget = this;
+        }
+      };
+
+      function matchSelector(node, selector) {
+        if (selector.startsWith('.')) {
+          const c = selector.slice(1);
+          return node.className.split(/\s+/).includes(c) || (node.classList && node.classList.contains(c));
+        }
+        if (selector.startsWith('#')) {
+          return node.id === selector.slice(1);
+        }
+        if (selector.startsWith('img[data-slide-index="')) {
+          const match = selector.match(/data-slide-index="(\d+)"/);
+          const idx = parseInt(match[1], 10);
+          return node.tagName === 'IMG' && parseInt(node.dataset.slideIndex, 10) === idx;
+        }
+        if (selector.toLowerCase() === node.tagName.toLowerCase()) {
+          return true;
+        }
+        return false;
+      }
+
+      function findRecursive(node, selector) {
+        for (const child of node.children) {
+          if (matchSelector(child, selector)) return child;
+          const found = findRecursive(child, selector);
+          if (found) return found;
+        }
+        return null;
+      }
+
+      function findAllRecursive(node, selector, results = []) {
+        for (const child of node.children) {
+          if (matchSelector(child, selector)) results.push(child);
+          findAllRecursive(child, selector, results);
+        }
+        return results;
+      }
+
+      el.querySelector = (sel) => findRecursive(el, sel);
+      el.querySelectorAll = (sel) => findAllRecursive(el, sel);
+
+      function parseHTMLToNodes(html) {
+        const root = createMockElement('root');
+        const stack = [root];
+        const tagRegex = /<(\/)?([a-z0-9-]+)([^>]*)>|([^<]+)/gi;
+        let match;
+        while ((match = tagRegex.exec(html)) !== null) {
+          const isClosing = !!match[1];
+          const tagName = match[2];
+          const rawAttrs = match[3] || '';
+          const text = match[4];
+
+          if (text) {
+            const trimmed = text.trim();
+            if (trimmed && stack.length > 1) {
+              const top = stack[stack.length - 1];
+              top.textContent = (top.textContent || '') + trimmed;
+            }
+            continue;
+          }
+
+          if (['svg', 'path', 'circle', 'line', 'polyline', 'polygon', 'rect'].includes(tagName.toLowerCase())) {
+            continue;
+          }
+
+          if (isClosing) {
+            if (stack.length > 1 && stack[stack.length - 1].tagName.toLowerCase() === tagName.toLowerCase()) {
+              stack.pop();
+            }
+          } else {
+            const isSelfClosing = rawAttrs.trim().endsWith('/') || ['input', 'img', 'hr', 'br'].includes(tagName.toLowerCase());
+            const child = createMockElement(tagName);
+            const cMatch = rawAttrs.match(/class="([^"]+)"/i);
+            if (cMatch) child.className = cMatch[1];
+            const vMatch = rawAttrs.match(/value="([^"]+)"/i);
+            if (vMatch) child.value = vMatch[1];
+            const tMatch = rawAttrs.match(/title="([^"]+)"/i);
+            if (tMatch) child.setAttribute('title', tMatch[1]);
+            const sMatch = rawAttrs.match(/data-slide-index="([^"]+)"/i);
+            if (sMatch) child.dataset.slideIndex = sMatch[1];
+            const srcMatch = rawAttrs.match(/src="([^"]+)"/i);
+            if (srcMatch) child.src = srcMatch[1];
+
+            stack[stack.length - 1].appendChild(child);
+            if (!isSelfClosing) {
+              stack.push(child);
+            }
+          }
+        }
+        return root.children;
+      }
+
+      Object.defineProperty(el, 'innerHTML', {
+        get() { return innerHtmlVal; },
+        set(html) {
+          innerHtmlVal = html;
+          el.children = [];
+          const nodes = parseHTMLToNodes(html);
+          nodes.forEach(n => el.appendChild(n));
+        }
+      });
+
+      return el;
+    }
 
     global.document = {
-      createElement: (tag) => {
-        const el = {
-          tagName: tag.toUpperCase(),
-          className: '',
-          children: [],
-          dataset: {},
-          attributes: {},
-          setAttribute: (k, v) => { el.attributes[k] = v; },
-          appendChild: (child) => {
-            el.children.push(child);
-            child.parentNode = el;
-          },
-          removeChild: (child) => {
-            const i = el.children.indexOf(child);
-            if (i !== -1) el.children.splice(i, 1);
-            child.parentNode = null;
-          },
-          listeners: {},
-          addEventListener: (evt, handler) => {
-            if (!el.listeners[evt]) el.listeners[evt] = [];
-            el.listeners[evt].push(handler);
-          },
-          dispatchEvent: (evt) => {
-            const handlers = el.listeners[evt.type] || [];
-            handlers.forEach(h => h(evt));
-          },
-          querySelector: (selector) => {
-            if (selector.startsWith('img[data-slide-index="')) {
-              const match = selector.match(/data-slide-index="(\d+)"/);
-              const idx = parseInt(match[1], 10);
-              return el.children.find(c => c.tagName === 'IMG' && c.dataset.slideIndex === idx) || null;
-            }
-            return null;
-          },
-          scrollIntoView: function(opts) {
-            scrolledTarget = this;
-          }
-        };
-        return el;
-      },
-      body: {
-        children: [],
-        appendChild: (child) => {
-          global.document.body.children.push(child);
-          child.parentNode = global.document.body;
-        },
-        removeChild: (child) => {
-          const i = global.document.body.children.indexOf(child);
-          if (i !== -1) global.document.body.children.splice(i, 1);
-          child.parentNode = null;
-        }
-      },
+      createElement: createMockElement,
+      body: createMockElement('body'),
       addEventListener: (evt, handler) => {
         if (!eventListeners[evt]) eventListeners[evt] = [];
         eventListeners[evt].push(handler);
@@ -434,10 +543,13 @@ global.chrome = {
     // Open lightbox starting at index 2 (slide 3)
     previewDrawer._showLightbox(2);
 
-    const lightbox = global.document.body.children.find(c => c.className === 'ytsnip-lightbox');
+    const lightbox = global.document.body.querySelector('.ytsnip-lightbox');
     assert.ok(lightbox, 'Lightbox element must be appended to body');
 
-    const images = lightbox.children.filter(c => c.tagName === 'IMG');
+    const toolbar = lightbox.querySelector('.ytsnip-lightbox-toolbar');
+    assert.ok(toolbar, 'Floating toolbar must be rendered inside lightbox');
+
+    const images = lightbox.querySelectorAll('.ytsnip-lightbox-img');
     assert.strictEqual(images.length, 3, 'All 3 slide images should be rendered in lightbox');
     assert.strictEqual(images[0].src, 'data:img1');
     assert.strictEqual(images[2].src, 'data:img3');
@@ -455,8 +567,8 @@ global.chrome = {
 
     // Test close via close button click
     previewDrawer._showLightbox(1);
-    const newLightbox = global.document.body.children.find(c => c.className === 'ytsnip-lightbox');
-    const closeBtn = newLightbox.children.find(c => c.className === 'ytsnip-lightbox-close');
+    const newLightbox = global.document.body.querySelector('.ytsnip-lightbox');
+    const closeBtn = newLightbox.querySelector('.ytsnip-lightbox-close');
     assert.ok(closeBtn, 'Close button should be present in lightbox');
 
     let stopPropagated = false;
@@ -465,14 +577,175 @@ global.chrome = {
 
     // Test close via backdrop click
     previewDrawer._showLightbox(0);
-    const backdropLightbox = global.document.body.children.find(c => c.className === 'ytsnip-lightbox');
+    const backdropLightbox = global.document.body.querySelector('.ytsnip-lightbox');
     backdropLightbox.dispatchEvent({ type: 'click', target: backdropLightbox });
     assert.strictEqual(global.document.body.children.includes(backdropLightbox), false, 'Lightbox should be removed on clicking backdrop');
 
+    console.log('✔ Test 14 Passed: _showLightbox renders all slides, floating toolbar, and handles all dismissal methods');
+
+    // Test 15: Zoom controls (In, Out, Label reset) and clamp bounds (0.25 to 4.0)
+    previewDrawer._showLightbox(0);
+    const zoomLightbox = global.document.body.querySelector('.ytsnip-lightbox');
+    const zoomInBtn = zoomLightbox.querySelector('.ytsnip-lightbox-zoom-in');
+    const zoomOutBtn = zoomLightbox.querySelector('.ytsnip-lightbox-zoom-out');
+    const zoomLabel = zoomLightbox.querySelector('.ytsnip-lightbox-zoom-label');
+
+    assert.ok(zoomInBtn && zoomOutBtn && zoomLabel, 'Zoom controls must exist in toolbar');
+    assert.strictEqual(zoomLabel.textContent, '100%', 'Initial zoom should be 100%');
+
+    // Click Zoom In
+    zoomInBtn.dispatchEvent({ type: 'click', stopPropagation: () => {} });
+    assert.strictEqual(zoomLabel.textContent, '125%', 'Zoom In should increase zoom to 125%');
+
+    zoomInBtn.dispatchEvent({ type: 'click', stopPropagation: () => {} });
+    assert.strictEqual(zoomLabel.textContent, '150%', 'Zoom In should increase zoom to 150%');
+
+    // Click Zoom Out
+    zoomOutBtn.dispatchEvent({ type: 'click', stopPropagation: () => {} });
+    assert.strictEqual(zoomLabel.textContent, '125%', 'Zoom Out should decrease zoom to 125%');
+
+    // Click Zoom Label -> Reset to 100%
+    zoomLabel.dispatchEvent({ type: 'click', stopPropagation: () => {} });
+    assert.strictEqual(zoomLabel.textContent, '100%', 'Clicking zoom label resets zoom to 100%');
+
+    // Zoom out past min bound (0.25 / 25%)
+    for (let i = 0; i < 10; i++) {
+      zoomOutBtn.dispatchEvent({ type: 'click', stopPropagation: () => {} });
+    }
+    assert.strictEqual(zoomLabel.textContent, '25%', 'Zoom should clamp at min bound of 25%');
+    assert.strictEqual(zoomOutBtn.disabled, true, 'Zoom out button should be disabled at min bound');
+
+    // Zoom in past max bound (4.0 / 400%)
+    for (let i = 0; i < 20; i++) {
+      zoomInBtn.dispatchEvent({ type: 'click', stopPropagation: () => {} });
+    }
+    assert.strictEqual(zoomLabel.textContent, '400%', 'Zoom should clamp at max bound of 400%');
+    assert.strictEqual(zoomInBtn.disabled, true, 'Zoom in button should be disabled at max bound');
+    console.log('✔ Test 15 Passed: Zoom In, Out, Reset, and min/max clamp bounds operate correctly');
+
+    // Test 16: Mouse wheel zooming with ctrlKey: true
+    zoomLabel.dispatchEvent({ type: 'click', stopPropagation: () => {} }); // Reset to 100%
+    assert.strictEqual(zoomLabel.textContent, '100%');
+
+    let preventedDefault = false;
+    zoomLightbox.dispatchEvent({
+      type: 'wheel',
+      ctrlKey: true,
+      deltaY: -100, // Wheel up -> zoom in
+      preventDefault: () => { preventedDefault = true; }
+    });
+    assert.strictEqual(preventedDefault, true, 'ctrlKey wheel should prevent browser zoom');
+    assert.strictEqual(zoomLabel.textContent, '110%', 'Wheel up with ctrlKey should zoom in to 110%');
+
+    zoomLightbox.dispatchEvent({
+      type: 'wheel',
+      ctrlKey: true,
+      deltaY: 100, // Wheel down -> zoom out
+      preventDefault: () => {}
+    });
+    assert.strictEqual(zoomLabel.textContent, '100%', 'Wheel down with ctrlKey should zoom back to 100%');
+
+    // Normal wheel scroll (ctrlKey = false) should not alter zoom
+    zoomLightbox.dispatchEvent({
+      type: 'wheel',
+      ctrlKey: false,
+      deltaY: -100,
+      preventDefault: () => {}
+    });
+    assert.strictEqual(zoomLabel.textContent, '100%', 'Normal wheel without ctrlKey should not alter zoom level');
+    console.log('✔ Test 16 Passed: Ctrl+Wheel / Pinch adjusts zoom level smoothly while normal wheel preserves scroll');
+
+    // Test 17: Touch pinch zoom gestures
+    zoomLightbox.dispatchEvent({
+      type: 'touchstart',
+      touches: [
+        { clientX: 100, clientY: 100 },
+        { clientX: 200, clientY: 100 } // initial distance: 100
+      ]
+    });
+    zoomLightbox.dispatchEvent({
+      type: 'touchmove',
+      touches: [
+        { clientX: 50, clientY: 100 },
+        { clientX: 250, clientY: 100 } // new distance: 200 (2x spread)
+      ],
+      preventDefault: () => {}
+    });
+    assert.strictEqual(zoomLabel.textContent, '200%', '2x touch spread should double zoom to 200%');
+
+    zoomLightbox.dispatchEvent({ type: 'touchend', touches: [] });
+    console.log('✔ Test 17 Passed: Multi-touch pinch gestures scale slide preview smoothly');
+
+    // Test 18: Page navigation (Prev/Next buttons, page input)
+    const prevBtn = zoomLightbox.querySelector('.ytsnip-lightbox-prev-btn');
+    const nextBtn = zoomLightbox.querySelector('.ytsnip-lightbox-next-btn');
+    const pageInput = zoomLightbox.querySelector('.ytsnip-lightbox-page-input');
+    const currentImages = zoomLightbox.querySelectorAll('.ytsnip-lightbox-img');
+
+    assert.ok(prevBtn && nextBtn && pageInput, 'Page navigation controls must exist in toolbar');
+
+    // Starts at index 0 (Slide 1)
+    assert.strictEqual(prevBtn.disabled, true, 'Prev button should be disabled on first slide');
+    assert.strictEqual(nextBtn.disabled, false, 'Next button should be enabled');
+    assert.strictEqual(pageInput.value, '1', 'Page input should show 1 on first slide');
+
+    // Next button click
+    nextBtn.dispatchEvent({ type: 'click', stopPropagation: () => {} });
+    assert.strictEqual(pageInput.value, '2', 'Page input should advance to 2');
+    assert.strictEqual(prevBtn.disabled, false, 'Prev button should be enabled on slide 2');
+    assert.strictEqual(scrolledTarget, currentImages[1], 'Slide 2 must be scrolled into view');
+
+    // Next button click -> slide 3 (last)
+    nextBtn.dispatchEvent({ type: 'click', stopPropagation: () => {} });
+    assert.strictEqual(pageInput.value, '3', 'Page input should advance to 3');
+    assert.strictEqual(nextBtn.disabled, true, 'Next button should be disabled on last slide');
+    assert.strictEqual(scrolledTarget, currentImages[2], 'Slide 3 must be scrolled into view');
+
+    // Prev button click -> slide 2
+    prevBtn.dispatchEvent({ type: 'click', stopPropagation: () => {} });
+    assert.strictEqual(pageInput.value, '2', 'Prev button should return to slide 2');
+    assert.strictEqual(scrolledTarget, currentImages[1]);
+
+    // Page input direct change -> slide 1
+    pageInput.value = '1';
+    pageInput.dispatchEvent({ type: 'change' });
+    assert.strictEqual(scrolledTarget, currentImages[0], 'Changing page input should jump directly to slide 1');
+    console.log('✔ Test 18 Passed: Prev/Next buttons and direct page number input navigate slides');
+
+    // Test 19: Keyboard navigation shortcuts (+, -, 0, Arrow keys, Home, End)
+    zoomLabel.dispatchEvent({ type: 'click', stopPropagation: () => {} }); // Reset to 100%
+    assert.strictEqual(zoomLabel.textContent, '100%');
+
+    const keyHandler = eventListeners['keydown'][0];
+
+    // Zoom shortcuts
+    keyHandler({ key: '+', preventDefault: () => {} });
+    assert.strictEqual(zoomLabel.textContent, '125%', 'Plus key should zoom in');
+
+    keyHandler({ key: '-', preventDefault: () => {} });
+    assert.strictEqual(zoomLabel.textContent, '100%', 'Minus key should zoom out');
+
+    keyHandler({ key: '0', preventDefault: () => {} });
+    assert.strictEqual(zoomLabel.textContent, '100%', 'Zero key should reset zoom');
+
+    // Arrow navigation
+    keyHandler({ key: 'ArrowDown', preventDefault: () => {} });
+    assert.strictEqual(pageInput.value, '2', 'ArrowDown should navigate to next slide');
+
+    keyHandler({ key: 'ArrowUp', preventDefault: () => {} });
+    assert.strictEqual(pageInput.value, '1', 'ArrowUp should navigate to previous slide');
+
+    keyHandler({ key: 'End', preventDefault: () => {} });
+    assert.strictEqual(pageInput.value, '3', 'End key should navigate to last slide');
+
+    keyHandler({ key: 'Home', preventDefault: () => {} });
+    assert.strictEqual(pageInput.value, '1', 'Home key should navigate to first slide');
+
+    console.log('✔ Test 19 Passed: Keyboard shortcuts navigate slides and control zoom');
+
     // Cleanup global document
     delete global.document;
-    console.log('✔ Test 14 Passed: _showLightbox renders all slides, scrolls to index, and handles all dismissal methods');
   }
 
-  console.log('\n✅ All Drawer Selection tests passed successfully!');
+  console.log('\n✅ All Drawer Selection & Lightbox Zoom tests passed successfully!');
 })();

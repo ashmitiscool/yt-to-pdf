@@ -200,7 +200,11 @@ yt_to_ppt/
   - **In-Place Live Card Updating (`updateSlide`)**: Replaces the active slide thumbnail, timestamp, and metadata in-place during incremental updates without resetting scroll position or re-rendering the entire grid.
   - **Capture Mode Configuration**: Allows toggling between `Final Slides Only (Clean)` and `All Steps (Incremental)` directly in the Options Ribbon with automatic persistence in `chrome.storage.local`.
   - **Dual Scan Action Triggers**: Provides dedicated **Scan All (0:00)** and dynamic **From Current (XX:XX)** action buttons directly in the options ribbon, updating live with video playback.
-  - **Continuous Scrollable Slide Deck Preview (`_showLightbox`)**: Clicking any slide thumbnail opens a full-screen, vertically scrollable image preview of all slides in the deck, automatically scrolling to and centering the clicked slide index with square corners, clean borderless presentation, and multi-mode dismissal (backdrop click, top-right close button, or <kbd>Esc</kbd> key).
+  - **Continuous Zoomable Slide Deck Preview (`_showLightbox`)**: Clicking any slide thumbnail opens a full-screen, Google Drive / PDF Viewer style preview of all slides with:
+    - **Floating Pill Toolbar (`.ytsnip-lightbox-toolbar`)**: Glassmorphism controls featuring active slide indicators (`<input> / Total`), prev/next navigation buttons, zoom out (`-`), zoom percentage reset (`100%`), zoom in (`+`), and close (`✖`).
+    - **Multi-Touch Pinch & Mouse Wheel Zooming**: Smoothly scales slide widths between `25%` and `400%` on <kbd>Ctrl</kbd> + Mouse Wheel / Trackpad Pinch / Touch gestures while preserving native vertical document scrolling on plain mouse wheel.
+    - **Live Scroll Position Tracking**: Dynamically updates the toolbar page indicator to reflect the slide closest to the viewport center during scrolling.
+    - **Full Keyboard Navigation**: Supports hotkeys for zoom (<kbd>+</kbd>, <kbd>-</kbd>, <kbd>0</kbd>), slide skipping (<kbd>↑</kbd>/<kbd>↓</kbd>, <kbd>←</kbd>/<kbd>→</kbd>, <kbd>PageUp</kbd>/<kbd>PageDown</kbd>, <kbd>Home</kbd>/<kbd>End</kbd>), and dismissal (<kbd>Esc</kbd>).
   - **Timestamp Navigation**: Clicking on a thumbnail jumps the YouTube video directly to that moment.
   - **Slide Deck Curation**: Reorder via drag-and-drop, delete unwanted frames, copy slide images directly to the system clipboard, or duplicate slides.
   - **Scan Controls & Preferences**: Sensitivity picker, capture mode picker, scan step interval selector, and optional bounding-box cropping.
