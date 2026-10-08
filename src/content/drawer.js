@@ -948,6 +948,11 @@
         : (typeof startIndex === 'string' ? [{ dataUrl: startIndex }] : []);
       const totalPages = Math.max(1, slidesToRender.length);
 
+      const prevBodyOverflow = (typeof document !== 'undefined' && document.body) ? document.body.style.overflow : '';
+      if (typeof document !== 'undefined' && document.body) {
+        document.body.style.overflow = 'hidden';
+      }
+
       const box = document.createElement('div');
       box.className = 'ytsnip-lightbox';
 
@@ -1057,11 +1062,19 @@
 
         const targetImg = box.querySelector ? box.querySelector(`img[data-slide-index="${clamped}"]`) : null;
         if (targetImg) {
-          isProgrammaticScroll = true;
-          if (programmaticScrollTimer) clearTimeout(programmaticScrollTimer);
-          programmaticScrollTimer = setTimeout(() => {
+          if (smooth) {
+            isProgrammaticScroll = true;
+            if (programmaticScrollTimer) clearTimeout(programmaticScrollTimer);
+            programmaticScrollTimer = setTimeout(() => {
+              isProgrammaticScroll = false;
+            }, 600);
+          } else {
             isProgrammaticScroll = false;
-          }, 600);
+            if (programmaticScrollTimer) {
+              clearTimeout(programmaticScrollTimer);
+              programmaticScrollTimer = null;
+            }
+          }
 
           if (typeof targetImg.scrollIntoView === 'function') {
             targetImg.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'center' });
@@ -1117,22 +1130,31 @@
         });
       }
 
+      const cancelProgrammaticScroll = () => {
+        if (isProgrammaticScroll || programmaticScrollTimer) {
+          isProgrammaticScroll = false;
+          if (programmaticScrollTimer) {
+            clearTimeout(programmaticScrollTimer);
+            programmaticScrollTimer = null;
+          }
+        }
+      };
+
       const onWheel = (e) => {
+        cancelProgrammaticScroll();
         if (e.ctrlKey || e.metaKey) {
           if (typeof e.preventDefault === 'function') e.preventDefault();
           const zoomDelta = e.deltaY < 0 ? 0.1 : -0.1;
           setZoom(scale + zoomDelta);
-        } else {
-          isProgrammaticScroll = false;
         }
       };
       box.addEventListener('wheel', onWheel, { passive: false });
-      box.addEventListener('mousedown', () => { isProgrammaticScroll = false; });
+      box.addEventListener('mousedown', cancelProgrammaticScroll);
 
       let initialTouchDist = null;
       let initialTouchScale = 1.0;
       const onTouchStart = (e) => {
-        isProgrammaticScroll = false;
+        cancelProgrammaticScroll();
         if (e.touches && e.touches.length === 2) {
           const dx = e.touches[0].clientX - e.touches[1].clientX;
           const dy = e.touches[0].clientY - e.touches[1].clientY;
@@ -1159,34 +1181,57 @@
       box.addEventListener('touchmove', onTouchMove, { passive: false });
       box.addEventListener('touchend', onTouchEnd, { passive: true });
 
-      let scrollDebounceTimer = null;
+      let scrollRafId = null;
       const onScroll = () => {
         if (isProgrammaticScroll) return;
-        if (scrollDebounceTimer) return;
-        scrollDebounceTimer = setTimeout(() => {
-          scrollDebounceTimer = null;
-          if (isProgrammaticScroll) return;
-          if (!box || !box.parentNode || typeof box.getBoundingClientRect !== 'function') return;
-          const boxRect = box.getBoundingClientRect();
-          const boxCenterY = boxRect.top + boxRect.height / 2;
+
+        if (scrollRafId) return;
+        const reqAnimFrame = typeof window !== 'undefined' && window.requestAnimationFrame
+          ? window.requestAnimationFrame
+          : (cb) => setTimeout(cb, 16);
+
+        scrollRafId = reqAnimFrame(() => {
+          scrollRafId = null;
+          if (isProgrammaticScroll || !box || !box.parentNode) return;
           const imgs = box.querySelectorAll ? box.querySelectorAll('.ytsnip-lightbox-img') : wrapper.children;
           if (!imgs || imgs.length === 0) return;
 
           let closestIdx = currentSlideIndex;
           let minDistance = Infinity;
 
-          for (let i = 0; i < imgs.length; i++) {
-            const img = imgs[i];
-            if (img && typeof img.getBoundingClientRect === 'function') {
-              const rect = img.getBoundingClientRect();
-              const imgCenterY = rect.top + rect.height / 2;
-              const dist = Math.abs(imgCenterY - boxCenterY);
+          const hasOffsetTop = typeof imgs[0].offsetTop === 'number' && !isNaN(imgs[0].offsetTop) && imgs[0].offsetHeight > 0;
+          if (hasOffsetTop && typeof box.scrollTop === 'number') {
+            const centerY = box.scrollTop + box.clientHeight / 2;
+            for (let i = 0; i < imgs.length; i++) {
+              const img = imgs[i];
+              const imgCenterY = img.offsetTop + img.offsetHeight / 2;
+              const dist = Math.abs(imgCenterY - centerY);
               if (dist < minDistance) {
                 minDistance = dist;
                 const idxVal = img.dataset && img.dataset.slideIndex !== undefined
                   ? parseInt(img.dataset.slideIndex, 10)
                   : i;
                 closestIdx = idxVal;
+              } else if (dist > minDistance && i > closestIdx) {
+                break;
+              }
+            }
+          } else if (typeof box.getBoundingClientRect === 'function') {
+            const boxRect = box.getBoundingClientRect();
+            const boxCenterY = boxRect.top + boxRect.height / 2;
+            for (let i = 0; i < imgs.length; i++) {
+              const img = imgs[i];
+              if (img && typeof img.getBoundingClientRect === 'function') {
+                const rect = img.getBoundingClientRect();
+                const imgCenterY = rect.top + rect.height / 2;
+                const dist = Math.abs(imgCenterY - boxCenterY);
+                if (dist < minDistance) {
+                  minDistance = dist;
+                  const idxVal = img.dataset && img.dataset.slideIndex !== undefined
+                    ? parseInt(img.dataset.slideIndex, 10)
+                    : i;
+                  closestIdx = idxVal;
+                }
               }
             }
           }
@@ -1198,11 +1243,21 @@
             }
             updateNavButtons();
           }
-        }, 50);
+        });
       };
       box.addEventListener('scroll', onScroll, { passive: true });
 
       const closeLightbox = () => {
+        if (typeof document !== 'undefined' && document.body) {
+          document.body.style.overflow = prevBodyOverflow;
+        }
+        if (scrollRafId) {
+          const cancelAnimFrame = typeof window !== 'undefined' && window.cancelAnimationFrame
+            ? window.cancelAnimationFrame
+            : clearTimeout;
+          cancelAnimFrame(scrollRafId);
+          scrollRafId = null;
+        }
         if (programmaticScrollTimer) {
           clearTimeout(programmaticScrollTimer);
           programmaticScrollTimer = null;
@@ -1280,7 +1335,7 @@
         document.body.appendChild(box);
       }
 
-      goToSlide(targetIndex);
+      goToSlide(targetIndex, false);
     }
 
     async exportDeck(type) {

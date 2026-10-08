@@ -376,11 +376,20 @@ global.chrome = {
         parentNode: null,
         dataset: {},
         attributes: {},
-        style: {
+        style: new Proxy({
           _styles: {},
-          setProperty(k, v) { this._styles[k] = v; },
-          getPropertyValue(k) { return this._styles[k]; }
-        },
+          setProperty(k, v) { this._styles[k] = v; this[k] = v; },
+          getPropertyValue(k) { return this._styles[k] || this[k]; }
+        }, {
+          get(target, prop) {
+            return prop in target ? target[prop] : target._styles[prop];
+          },
+          set(target, prop, value) {
+            target[prop] = value;
+            target._styles[prop] = value;
+            return true;
+          }
+        }),
         classList: {
           _classes: new Set(),
           add(...cls) { cls.forEach(c => this._classes.add(c)); },
@@ -742,6 +751,24 @@ global.chrome = {
     assert.strictEqual(pageInput.value, '1', 'Home key should navigate to first slide');
 
     console.log('✔ Test 19 Passed: Keyboard shortcuts navigate slides and control zoom');
+
+    // Close zoomLightbox from Tests 15-19
+    const zoomCloseBtn = zoomLightbox.querySelector('.ytsnip-lightbox-close');
+    zoomCloseBtn.dispatchEvent({ type: 'click', stopPropagation: () => {} });
+
+    // Test 20: Body scroll lock and restoration
+    {
+      global.document.body.style.overflow = 'auto';
+      previewDrawer._showLightbox(1);
+      assert.strictEqual(global.document.body.style.overflow, 'hidden', 'Body scroll must be locked to hidden when lightbox is open');
+
+      const activeLightbox = global.document.body.querySelector('.ytsnip-lightbox');
+      const closeBtn = activeLightbox.querySelector('.ytsnip-lightbox-close');
+      closeBtn.dispatchEvent({ type: 'click', stopPropagation: () => {} });
+      assert.strictEqual(global.document.body.style.overflow, 'auto', 'Body scroll must be restored when lightbox is closed');
+
+      console.log('✔ Test 20 Passed: Body scroll lock correctly isolates lightbox and restores on close');
+    }
 
     // Cleanup global document
     delete global.document;

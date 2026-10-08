@@ -110,7 +110,8 @@ yt_to_ppt/
 │   ├── yt-to-pdf-v1.0.0.zip
 │   ├── yt-to-pdf-v1.0.1.zip
 │   ├── yt-to-pdf-v1.0.2.zip
-│   └── yt-to-pdf-v1.1.0.zip
+│   ├── yt-to-pdf-v1.1.0.zip
+│   └── yt-to-pdf-v1.1.1.zip
 │
 ├── icons/                         # Extension icons in standard resolutions
 │   ├── icon16.png                 # 16x16 icon (favicon / context menus)
@@ -203,8 +204,9 @@ yt_to_ppt/
   - **Dual Scan Action Triggers**: Provides dedicated **Scan All (0:00)** and dynamic **From Current (XX:XX)** action buttons directly in the options ribbon, updating live with video playback.
   - **Continuous Zoomable Slide Deck Preview (`_showLightbox`)**: Clicking any slide thumbnail opens a full-screen, Google Drive / PDF Viewer style preview of all slides with:
     - **Floating Pill Toolbar (`.ytsnip-lightbox-toolbar`)**: Glassmorphism controls featuring active slide indicators (`<input> / Total`), prev/next navigation buttons, zoom out (`-`), zoom percentage reset (`100%`), zoom in (`+`), and close (`✖`).
-    - **Multi-Touch Pinch & Mouse Wheel Zooming**: Smoothly scales slide widths between `25%` and `400%` on <kbd>Ctrl</kbd> + Mouse Wheel / Trackpad Pinch / Touch gestures while preserving native vertical document scrolling on plain mouse wheel.
-    - **Live Scroll Position Tracking**: Dynamically updates the toolbar page indicator to reflect the slide closest to the viewport center during scrolling.
+    - **High-Performance Asynchronous Scroll Tracking**: Dynamically updates the toolbar page indicator via `requestAnimationFrame` using vertical scroll center offsets with early-break optimization to track the active slide with zero forced layout thrashing or uncoordinated reflows.
+    - **Scroll Isolation & Boundary Protection**: Employs `overscroll-behavior: contain`, `scroll-behavior: auto !important`, and temporary background document body scroll locking (`document.body.style.overflow = 'hidden'`) to completely eliminate scroll chaining into the YouTube page and ensure fluid 60/120fps scrolling.
+    - **Instantaneous Initial Slide Positioning**: Immediately jumps to the target slide on modal open (`goToSlide(targetIndex, false)`) to prevent programmatic smooth-scroll interpolation curves from colliding with incoming user mouse wheel ticks.
     - **Full Keyboard Navigation**: Supports hotkeys for zoom (<kbd>+</kbd>, <kbd>-</kbd>, <kbd>0</kbd>), slide skipping (<kbd>↑</kbd>/<kbd>↓</kbd>, <kbd>←</kbd>/<kbd>→</kbd>, <kbd>PageUp</kbd>/<kbd>PageDown</kbd>, <kbd>Home</kbd>/<kbd>End</kbd>), and dismissal (<kbd>Esc</kbd>).
   - **Timestamp Navigation**: Clicking on a thumbnail jumps the YouTube video directly to that moment.
   - **Slide Deck Curation**: Reorder via drag-and-drop, delete unwanted frames, copy slide images directly to the system clipboard, or duplicate slides.
