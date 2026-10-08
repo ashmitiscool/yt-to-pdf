@@ -129,6 +129,7 @@ yt_to_ppt/
 │
 ├── scripts/                       # Developer toolchain and build automation
 │   ├── audit_compliance.js        # Static analyzer auditing for Chrome Web Store policy compliance
+│   ├── bump-version.js            # CLI and interactive version bumper updating manifest, package, and docs
 │   ├── generate_icons.js          # Utility script to generate PNG icons via node-canvas
 │   └── package.js                 # Packaging script producing clean, validated distribution zips
 │
@@ -152,6 +153,7 @@ yt_to_ppt/
 │       └── injected.css           # In-page styles for injected player buttons & drawer overlay
 │
 └── tests/                         # Algorithmic and UI test suite
+    ├── bump.test.js               # Unit tests for CLI version bumping and semver parsing
     ├── detector.test.js           # Unit tests for perceptual hashing & transition detection
     ├── drawer.test.js             # Unit tests for slide selection, select/deselect all & deck curation
     ├── exporter.test.js           # Unit tests for clipboard frame export & fallback handling
@@ -459,7 +461,23 @@ npm run package
 ```
 Output files are saved to `dist/yt-to-pdf-v<version>.zip` and `yt-to-pdf.zip`.
 
-### 4. Loading Unpacked Extension in Chrome
+### 4. Bumping Extension Version
+Use the version bump CLI to update the version across `manifest.json`, `package.json`, `package-lock.json`, and `ARCHITECTURE.md`, with optional automatic release package generation:
+
+```bash
+# Interactive mode (prompts for patch, minor, major, or custom semver):
+npm run bump
+
+# Direct CLI arguments:
+npm run bump -- patch
+npm run bump -- minor
+npm run bump -- 1.2.0
+
+# Without rebuilding the distribution zip:
+npm run bump -- patch --no-package
+```
+
+### 5. Loading Unpacked Extension in Chrome
 1. Open Google Chrome and navigate to `chrome://extensions/`.
 2. Enable **Developer mode** (top right toggle).
 3. Click **Load unpacked** and select the root directory of this repository (`C:\Users\ashmi\Coding\Projects\yt_to_ppt`).
