@@ -97,6 +97,7 @@ yt_to_ppt/
 ├── package.json                   # Node package metadata, scripts, and dev dependencies
 ├── package-lock.json              # Locked dependency tree
 ├── README.md                      # End-user documentation and quick-start guide
+├── CHANGELOG.md                   # Project changelog and release history
 ├── ARCHITECTURE.md                # Developer documentation (this document)
 ├── AGENTS.md                      # Workspace agent guidelines & architecture sync rules
 ├── LICENSE                        # Proprietary license terms
