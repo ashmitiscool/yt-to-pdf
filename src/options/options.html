@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YT to PDF - Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="settings-container">
+    <!-- Header -->
+    <header class="settings-header">
+      <div class="header-branding">
+        <div class="logo-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+            <line x1="8" y1="21" x2="16" y2="21"></line>
+            <line x1="12" y1="17" x2="12" y2="21"></line>
+          </svg>
+        </div>
+        <div>
+          <h1 class="header-title">YT to PDF Settings</h1>
+          <p class="header-subtitle">Customize slide capture, clipboard behavior, and player controls</p>
+        </div>
+      </div>
+      <div class="save-status" id="save-status">
+        <span class="status-indicator"></span>
+        <span id="save-status-text">Settings synced</span>
+      </div>
+    </header>
+
+    <!-- Section 1: Capture & Clipboard -->
+    <section class="settings-card">
+      <div class="card-header">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+          </svg>
+        </div>
+        <div>
+          <h2 class="card-title">Slide Capture & Clipboard</h2>
+          <p class="card-desc">Configure what happens when capturing slides into your deck</p>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="setting-row">
+          <div class="setting-info">
+            <label class="setting-label" for="toggle-auto-copy">Auto-copy to clipboard on capture</label>
+            <p class="setting-help">
+              When enabled, snapping a slide (via player camera button, popup, or <kbd>Alt+S</kbd>) automatically copies the slide image to your system clipboard ready to paste into Notion, OneNote, Word, Google Docs, etc.
+            </p>
+          </div>
+          <div class="setting-control">
+            <label class="switch">
+              <input type="checkbox" id="toggle-auto-copy">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Player Icons Visibility -->
+    <section class="settings-card">
+      <div class="card-header">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+            <polyline points="2 17 12 22 22 17"></polyline>
+            <polyline points="2 12 12 17 22 12"></polyline>
+          </svg>
+        </div>
+        <div>
+          <h2 class="card-title">YouTube Player Icons</h2>
+          <p class="card-desc">Choose which action buttons appear in the YouTube video controls bar</p>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <p class="section-hint">
+          Changes update live in open YouTube tabs. Keyboard shortcuts remain active even when buttons are hidden.
+        </p>
+
+        <div class="icon-toggle-list">
+          <!-- 1. Snap Slide -->
+          <div class="icon-toggle-row">
+            <div class="icon-preview-wrap">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                <circle cx="12" cy="13" r="4"></circle>
+              </svg>
+            </div>
+            <div class="icon-info">
+              <span class="icon-name">Snap Slide Button</span>
+              <span class="icon-desc">Adds current video frame to your slide deck (<kbd>Alt+S</kbd>)</span>
+            </div>
+            <div class="setting-control">
+              <label class="switch">
+                <input type="checkbox" id="toggle-icon-snap">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 2. Copy Frame to Clipboard -->
+          <div class="icon-toggle-row">
+            <div class="icon-preview-wrap">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+              </svg>
+            </div>
+            <div class="icon-info">
+              <span class="icon-name">Copy Frame to Clipboard Button</span>
+              <span class="icon-desc">Copies video screenshot to clipboard without adding to deck (<kbd>Alt+C</kbd>)</span>
+            </div>
+            <div class="setting-control">
+              <label class="switch">
+                <input type="checkbox" id="toggle-icon-clipboard">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 3. Auto-Scan -->
+          <div class="icon-toggle-row">
+            <div class="icon-preview-wrap">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+              </svg>
+            </div>
+            <div class="icon-info">
+              <span class="icon-name">Auto-Scan Slides Button</span>
+              <span class="icon-desc">Opens automated slide detection and scanner (<kbd>Alt+A</kbd>)</span>
+            </div>
+            <div class="setting-control">
+              <label class="switch">
+                <input type="checkbox" id="toggle-icon-scan">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 4. Deck Drawer -->
+          <div class="icon-toggle-row">
+            <div class="icon-preview-wrap">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+            </div>
+            <div class="icon-info">
+              <span class="icon-name">Slide Deck Drawer Button</span>
+              <span class="icon-desc">Opens the slide deck drawer with thumbnail gallery & exports (<kbd>Alt+D</kbd>)</span>
+            </div>
+            <div class="setting-control">
+              <label class="switch">
+                <input type="checkbox" id="toggle-icon-deck">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: Detection & Scan Defaults -->
+    <section class="settings-card">
+      <div class="card-header">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </div>
+        <div>
+          <h2 class="card-title">Default Scanner Preferences</h2>
+          <p class="card-desc">Set default scan behaviors used when launching automated auto-scan</p>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="setting-row">
+          <div class="setting-info">
+            <label class="setting-label" for="select-capture-mode">Default Scan Mode</label>
+            <p class="setting-help">
+              <strong>Final Slides Only</strong> updates incremental steps in place so you get 1 clean, fully completed slide per topic. <strong>All Steps</strong> saves intermediate animation steps as individual slides.
+            </p>
+          </div>
+          <div class="setting-control">
+            <select class="settings-select" id="select-capture-mode">
+              <option value="final_only">Final Slides Only (Clean)</option>
+              <option value="all_steps">All Steps (Incremental)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <label class="setting-label" for="select-sensitivity">Default Detection Sensitivity</label>
+            <p class="setting-help">
+              Controls the threshold for slide transition differences. Balanced is recommended for most lecture videos.
+            </p>
+          </div>
+          <div class="setting-control">
+            <select class="settings-select" id="select-sensitivity">
+              <option value="high">High (Subtle changes)</option>
+              <option value="medium" selected>Balanced (Standard)</option>
+              <option value="low">Low (Major transitions only)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 4: Keyboard Shortcuts Reference -->
+    <section class="settings-card">
+      <div class="card-header">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
+            <line x1="6" y1="8" x2="6" y2="8"></line>
+            <line x1="10" y1="8" x2="10" y2="8"></line>
+            <line x1="14" y1="8" x2="14" y2="8"></line>
+            <line x1="18" y1="8" x2="18" y2="8"></line>
+            <line x1="6" y1="12" x2="6" y2="12"></line>
+            <line x1="18" y1="12" x2="18" y2="12"></line>
+            <line x1="9" y1="16" x2="15" y2="16"></line>
+          </svg>
+        </div>
+        <div>
+          <h2 class="card-title">Keyboard Shortcuts</h2>
+          <p class="card-desc">Quick hotkeys available when watching YouTube videos</p>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="shortcuts-table">
+          <div class="shortcut-item">
+            <span class="shortcut-key"><kbd>Alt</kbd> + <kbd>S</kbd></span>
+            <span class="shortcut-desc">Snap slide into deck</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-key"><kbd>Alt</kbd> + <kbd>C</kbd></span>
+            <span class="shortcut-desc">Copy video frame to clipboard</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-key"><kbd>Alt</kbd> + <kbd>A</kbd></span>
+            <span class="shortcut-desc">Auto-Scan slides dialog</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-key"><kbd>Alt</kbd> + <kbd>D</kbd></span>
+            <span class="shortcut-desc">Toggle slide deck drawer</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="settings-footer">
+      <button class="btn-reset" id="btn-reset">Reset to Defaults</button>
+      <div class="footer-meta">
+        <span>YT to PDF &bull; 100% Client-Side &bull; Privacy First</span>
+      </div>
+    </footer>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

@@ -1,8 +1,12 @@
 /* YT SlideSnip - YouTube Injected Styles */
 
 /* In-Player Action Buttons in .ytp-right-controls */
+.ytsnip-hidden {
+  display: none !important;
+}
+
 .ytsnip-yt-btn {
-  display: inline-flex !important;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 36px;
@@ -199,6 +203,30 @@
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 12px;
+}
+
+.ytsnip-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ytsnip-icon-btn {
+  background: transparent;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ytsnip-icon-btn:hover {
+  background: #333;
+  color: #fff;
 }
 
 .ytsnip-close-btn {

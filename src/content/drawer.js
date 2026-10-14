@@ -22,7 +22,8 @@
     zoomIn: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>`,
     zoomOut: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>`,
     prev: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>`,
-    next: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`
+    next: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`,
+    settings: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`
   };
 
   const DB_NAME = 'YTSnipDB';
@@ -270,9 +271,14 @@
             <h3 class="ytsnip-title">Slide Deck</h3>
             <span class="ytsnip-count-badge" id="ytsnip-badge">0 slides</span>
           </div>
-          <button class="ytsnip-close-btn" id="ytsnip-close-btn" title="Close Drawer">
-            ${ICONS.close}
-          </button>
+          <div class="ytsnip-header-actions">
+            <button class="ytsnip-icon-btn" id="ytsnip-settings-btn" title="Extension Settings">
+              ${ICONS.settings}
+            </button>
+            <button class="ytsnip-close-btn" id="ytsnip-close-btn" title="Close Drawer">
+              ${ICONS.close}
+            </button>
+          </div>
         </div>
 
         <div class="ytsnip-scan-banner" id="ytsnip-scan-banner" style="display: none;">
@@ -377,6 +383,27 @@
     _bindEvents() {
       const closeBtn = this.drawerEl.querySelector('#ytsnip-close-btn');
       closeBtn.addEventListener('click', () => this.close());
+
+      const settingsBtn = this.drawerEl.querySelector('#ytsnip-settings-btn');
+      if (settingsBtn) {
+        settingsBtn.addEventListener('click', () => {
+          try {
+            if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.id) {
+              this.showToast('Extension was reloaded. Please refresh the page.', 3000);
+              return;
+            }
+            chrome.runtime.sendMessage({ action: 'OPEN_OPTIONS' }, (res) => {
+              if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.lastError) {
+                console.warn('Could not open options page:', chrome.runtime.lastError);
+                this.showToast('Could not open settings. Please refresh the page.', 2500);
+              }
+            });
+          } catch (err) {
+            console.warn('Extension context invalidated:', err);
+            this.showToast('Extension was reloaded. Please refresh the page.', 3000);
+          }
+        });
+      }
 
       const scanAllBtn = this.drawerEl.querySelector('#ytsnip-scan-all-btn');
       if (scanAllBtn) {

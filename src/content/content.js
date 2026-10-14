@@ -14,12 +14,96 @@
   let scanner = null;
   let currentVideoId = null;
 
+  let extensionSettings = {
+    autoCopyClipboard: false,
+    icons: {
+      snap: true,
+      clipboard: true,
+      scan: true,
+      deck: true
+    }
+  };
+
+  let btnGroupEl = null;
+  let snapBtnEl = null;
+  let clipBtnEl = null;
+  let scanBtnEl = null;
+  let deckBtnEl = null;
+
   const ICONS = {
     camera: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>`,
     clipboard: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>`,
     scan: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`,
     deck: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>`
   };
+
+  function updatePlayerButtonsVisibility() {
+    let group = btnGroupEl;
+    if (!group || !group.isConnected) {
+      group = document.querySelector('.ytsnip-btn-group');
+      if (group) btnGroupEl = group;
+    }
+    if (!group) return;
+
+    const icons = extensionSettings.icons || {};
+    const showSnap = icons.snap !== false;
+    const showClip = icons.clipboard !== false;
+    const showScan = icons.scan !== false;
+    const showDeck = icons.deck !== false;
+
+    let snap = snapBtnEl;
+    if (!snap || !snap.isConnected) snap = group.querySelector('.ytsnip-btn-snap');
+    let clip = clipBtnEl;
+    if (!clip || !clip.isConnected) clip = group.querySelector('.ytsnip-btn-clipboard');
+    let scan = scanBtnEl;
+    if (!scan || !scan.isConnected) scan = group.querySelector('.ytsnip-btn-scan');
+    let deck = deckBtnEl;
+    if (!deck || !deck.isConnected) deck = group.querySelector('.ytsnip-btn-deck');
+
+    if (snap) {
+      snap.classList.toggle('ytsnip-hidden', !showSnap);
+      snap.style.setProperty('display', showSnap ? 'inline-flex' : 'none', 'important');
+    }
+    if (clip) {
+      clip.classList.toggle('ytsnip-hidden', !showClip);
+      clip.style.setProperty('display', showClip ? 'inline-flex' : 'none', 'important');
+    }
+    if (scan) {
+      scan.classList.toggle('ytsnip-hidden', !showScan);
+      scan.style.setProperty('display', showScan ? 'inline-flex' : 'none', 'important');
+    }
+    if (deck) {
+      deck.classList.toggle('ytsnip-hidden', !showDeck);
+      deck.style.setProperty('display', showDeck ? 'inline-flex' : 'none', 'important');
+    }
+
+    const anyVisible = showSnap || showClip || showScan || showDeck;
+    group.classList.toggle('ytsnip-hidden', !anyVisible);
+    group.style.setProperty('display', anyVisible ? 'inline-flex' : 'none', 'important');
+  }
+
+  async function loadExtensionSettings() {
+    if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) return;
+    try {
+      const res = await chrome.storage.local.get(['ytsnip_settings', 'ytsnip_auto_copy_clipboard']);
+      if (res.ytsnip_settings) {
+        extensionSettings = {
+          ...extensionSettings,
+          ...res.ytsnip_settings,
+          icons: {
+            ...extensionSettings.icons,
+            ...(res.ytsnip_settings.icons || {})
+          }
+        };
+      }
+      if (typeof res.ytsnip_auto_copy_clipboard === 'boolean' && (!res.ytsnip_settings || res.ytsnip_settings.autoCopyClipboard === undefined)) {
+        extensionSettings.autoCopyClipboard = res.ytsnip_auto_copy_clipboard;
+      }
+      updatePlayerButtonsVisibility();
+    } catch (e) {
+      console.warn('Could not load extension settings in content script:', e);
+    }
+  }
 
   function getVideoElement() {
     return document.querySelector('video.html5-main-video') || document.querySelector('video');
@@ -72,6 +156,7 @@
       });
     }
 
+    loadExtensionSettings();
     handlePageChange();
   }
 
@@ -107,7 +192,7 @@
 
     // 1. Snap Slide Button
     const snapBtn = document.createElement('button');
-    snapBtn.className = 'ytp-button ytsnip-yt-btn';
+    snapBtn.className = 'ytp-button ytsnip-yt-btn ytsnip-btn-snap';
     snapBtn.title = 'Snap Slide (Alt+S) - Add current frame to slide deck';
     snapBtn.innerHTML = ICONS.camera;
     snapBtn.addEventListener('click', (e) => {
@@ -117,7 +202,7 @@
 
     // 2. Screenshot to Clipboard Button
     const clipBtn = document.createElement('button');
-    clipBtn.className = 'ytp-button ytsnip-yt-btn';
+    clipBtn.className = 'ytp-button ytsnip-yt-btn ytsnip-btn-clipboard';
     clipBtn.title = 'Copy Frame to Clipboard (Alt+C)';
     clipBtn.innerHTML = ICONS.clipboard;
     clipBtn.addEventListener('click', (e) => {
@@ -127,7 +212,7 @@
 
     // 3. Auto-Scan Button
     const scanBtn = document.createElement('button');
-    scanBtn.className = 'ytp-button ytsnip-yt-btn';
+    scanBtn.className = 'ytp-button ytsnip-yt-btn ytsnip-btn-scan';
     scanBtn.title = 'Auto-Scan Slides (Alt+A)';
     scanBtn.innerHTML = ICONS.scan;
     scanBtn.addEventListener('click', (e) => {
@@ -139,7 +224,7 @@
 
     // 4. Open Deck Drawer Button
     const deckBtn = document.createElement('button');
-    deckBtn.className = 'ytp-button ytsnip-yt-btn';
+    deckBtn.className = 'ytp-button ytsnip-yt-btn ytsnip-btn-deck';
     deckBtn.title = 'Open Slide Deck (Alt+D)';
     deckBtn.innerHTML = `${ICONS.deck} <span class="ytsnip-yt-badge" style="display: ${drawer.slides.length > 0 ? 'inline-block' : 'none'}">${drawer.slides.length}</span>`;
     deckBtn.addEventListener('click', (e) => {
@@ -152,11 +237,18 @@
     group.appendChild(scanBtn);
     group.appendChild(deckBtn);
 
+    btnGroupEl = group;
+    snapBtnEl = snapBtn;
+    clipBtnEl = clipBtn;
+    scanBtnEl = scanBtn;
+    deckBtnEl = deckBtn;
+    updatePlayerButtonsVisibility();
+
     // Insert at beginning of right controls
     rightControls.insertBefore(group, rightControls.firstChild);
   }
 
-  function captureCurrentFrame() {
+  async function captureCurrentFrame() {
     const video = getVideoElement();
     if (!video || isNaN(video.currentTime)) {
       if (drawer) drawer.showToast('Video not ready to capture');
@@ -185,7 +277,25 @@
         height: frame.height
       };
 
-      drawer.addSlide(slide, true);
+      const willAutoCopy = !!extensionSettings.autoCopyClipboard;
+      drawer.addSlide(slide, !willAutoCopy);
+
+      if (willAutoCopy) {
+        let copied = false;
+        try {
+          if (window.SlideExporter && window.SlideExporter.copyVideoFrameToClipboard) {
+            copied = await window.SlideExporter.copyVideoFrameToClipboard(video);
+          }
+        } catch (copyErr) {
+          console.warn('Auto-copy frame to clipboard failed:', copyErr);
+        }
+
+        if (copied) {
+          drawer.showToast(`Slide captured & copied to clipboard at ${formattedTime}! (Total: ${drawer.slides.length})`);
+        } else {
+          drawer.showToast(`Slide captured at ${formattedTime}! (Clipboard copy failed)`);
+        }
+      }
     } catch (err) {
       console.error('Frame capture failed:', err);
       drawer.showToast('Failed to capture frame: ' + err.message);
@@ -364,6 +474,33 @@
       return true;
     });
   }
+
+  // Storage change listener (for live reactive updates from settings tab)
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area !== 'local') return;
+      let needsVisibilityUpdate = false;
+      if (changes.ytsnip_settings) {
+        const val = changes.ytsnip_settings.newValue || {};
+        extensionSettings = {
+          ...extensionSettings,
+          ...val,
+          icons: {
+            ...extensionSettings.icons,
+            ...(val.icons || {})
+          }
+        };
+        needsVisibilityUpdate = true;
+      }
+      if (changes.ytsnip_auto_copy_clipboard) {
+        extensionSettings.autoCopyClipboard = !!changes.ytsnip_auto_copy_clipboard.newValue;
+      }
+      if (needsVisibilityUpdate) {
+        updatePlayerButtonsVisibility();
+      }
+    });
+  }
+
 
   // Initialize
   if (document.readyState === 'loading') {

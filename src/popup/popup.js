@@ -144,5 +144,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     await sendMessageToTab({ action: 'EXPORT_DECK', exportType: 'zip' });
   });
 
+  // Settings button
+  const btnOpenSettings = document.getElementById('btn-open-settings');
+  if (btnOpenSettings) {
+    btnOpenSettings.addEventListener('click', () => {
+      try {
+        if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.openOptionsPage) {
+          chrome.runtime.openOptionsPage();
+        }
+      } catch (e) {
+        console.warn('Failed to open options page:', e);
+      }
+    });
+  }
+
   await updateStatus();
 });

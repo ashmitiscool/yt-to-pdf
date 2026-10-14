@@ -39,6 +39,10 @@ graph TD
             POP["Popup: src/popup/popup.html / .js"]
         end
 
+        subgraph Options_UI["Options Context (New Tab)"]
+            OPT["Settings Page: src/options/options.html / .js"]
+        end
+
         subgraph Background_Context["Background Context"]
             SW["Service Worker: src/background/background.js"]
         end
@@ -71,12 +75,18 @@ graph TD
 
     %% Interactions
     POP -->|"chrome.tabs.sendMessage"| CS
-    CS -->|"DOM Injection"| YDOM
+    POP -->|"chrome.runtime.openOptionsPage"| OPT
+    DRW -->|"OPEN_OPTIONS IPC"| SW
+    SW -->|"chrome.runtime.openOptionsPage"| OPT
+    OPT -->|"chrome.storage.local.set"| STOR
+    STOR -.->|"chrome.storage.onChanged"| CS
+    CS -->|"DOM Injection (Filtered Icons)"| YDOM
     CS -->|"Seeks / Reads Frames"| YVID
     SCN -->|"Captures Frames to Canvas"| YVID
     SCN -->|"Compares Frame Hashes"| DET
     SCN -->|"Emits New Slide"| DRW
-    CS -->|"Manual Snap"| DRW
+    CS -->|"Manual Snap (Auto-Copy Optional)"| DRW
+    CS -->|"Auto-Copy Frame Blob"| CLIP["System Clipboard"]
     DRW -->|"Saves / Restores Decks"| STOR
     DRW -->|"Triggers Export"| EXP
     EXP -->|"Renders Presentation"| PPT
@@ -145,6 +155,11 @@ yt_to_ppt/
 │   │   ├── exporter.js            # Multi-format export pipeline (PPTX, PDF, ZIP, Print)
 │   │   └── scanner.js             # Automated frame seeker, scanner state machine & grabber
 │   │
+│   ├── options/                   # Extension settings page (opens in new tab)
+│   │   ├── options.html           # Settings menu structure & toggles
+│   │   ├── options.css            # Dark theme styles & toggle switch components
+│   │   └── options.js             # Options controller & chrome.storage.local sync
+│   │
 │   ├── popup/                     # Browser action toolbar popup
 │   │   ├── popup.html             # Popup structure & layout
 │   │   ├── popup.css              # Popup styling & theme
@@ -158,6 +173,7 @@ yt_to_ppt/
     ├── detector.test.js           # Unit tests for perceptual hashing & transition detection
     ├── drawer.test.js             # Unit tests for slide selection, select/deselect all & deck curation
     ├── exporter.test.js           # Unit tests for clipboard frame export & fallback handling
+    ├── options.test.js            # Unit tests for settings storage, defaults, migration & icon toggles
     └── scanner.test.js            # Unit tests for video seeking, startFrom bounds & time formatting
 ```
 
@@ -230,13 +246,23 @@ yt_to_ppt/
 ### Toolbar Action Popup (`src/popup/`)
 - **Role**: Browser extension toolbar popup interface.
 - **Components**:
-  - `popup.html`: Markup for status indicators, active video title, slide counter, and quick action buttons including dual **Auto-Scan All (from 0:00)** and **Auto-Scan From Current (XX:XX)**.
+  - `popup.html`: Markup for status indicators, active video title, slide counter, settings shortcut button, and quick action buttons including dual **Auto-Scan All (from 0:00)** and **Auto-Scan From Current (XX:XX)**.
   - `popup.css`: Extension popup theme matching modern design standards.
-  - `popup.js`: Queries the active tab, verifies YouTube watch page state, queries active video timestamp via `GET_STATUS`, and forwards commands to `content.js` via `chrome.tabs.sendMessage`.
+  - `popup.js`: Queries the active tab, verifies YouTube watch page state, queries active video timestamp via `GET_STATUS`, forwards commands to `content.js` via `chrome.tabs.sendMessage`, and launches options tab via `chrome.runtime.openOptionsPage()`.
+
+### Extension Settings Page (`src/options/`)
+- **Role**: Full-page options and preference management interface opened in a dedicated browser tab (`chrome.runtime.openOptionsPage()`).
+- **Components**:
+  - `options.html`: Structured cards for Slide Capture & Clipboard behavior, YouTube Player Control Icons visibility toggles, Scanner Defaults (capture mode and sensitivity), and keyboard shortcuts guide.
+  - `options.css`: Dark-themed modern layout with toggle switch controls, responsive grid, and live synced indicators.
+  - `options.js`: Reads and persists configuration (`ytsnip_settings`, `ytsnip_auto_copy_clipboard`, `ytsnip_capture_mode`) into `chrome.storage.local`, triggering instant live updates across active YouTube tabs.
 
 ### Background Service Worker (`src/background/`)
 - **Role**: Manifest V3 background service worker (`src/background/background.js`).
-- **Functionality**: Minimal lifecycle handler for extension installation and update events.
+- **Functionality**:
+  - Minimal lifecycle handler for extension installation and update events.
+  - IPC handler for `OPEN_OPTIONS` messages sent from in-page content scripts to invoke `chrome.runtime.openOptionsPage()`.
+
 
 ---
 
@@ -366,6 +392,28 @@ sequenceDiagram
 
 ---
 
+### Settings & Player Icon Customization Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant OPT as options.html / options.js
+    participant STOR as chrome.storage.local
+    participant CS as content.js
+    participant YTP as YouTube Player Controls (.ytp-right-controls)
+
+    User->>OPT: Toggles Auto-Copy or Player Icon visibility
+    OPT->>STOR: chrome.storage.local.set({ ytsnip_settings, ... })
+    OPT-->>User: Displays "Settings saved" notification
+    STOR-->>CS: chrome.storage.onChanged event fires
+    CS->>CS: Updates internal extensionSettings state
+    CS->>YTP: Adjusts button style.display (inline-flex or none)
+    Note over CS,YTP: Changes take effect immediately without page reload
+```
+
+---
+
 ## 5. State Management & Storage Schema
 
 Slide decks are stored locally in the browser's high-capacity sandboxed IndexedDB database (`YTSnipDB`). This provides extensive storage capacity (100+ MB per origin) with **zero extra permissions** in `manifest.json`, supporting concurrent multi-tab presentation workflows without quota limitations.
@@ -375,7 +423,7 @@ Slide decks are stored locally in the browser's high-capacity sandboxed IndexedD
 - **Primary Object Store**: `decks`
   - **Key Path**: `videoId` (string, e.g. `"dQw4w9WgXcQ"`)
   - **Index**: `updatedAt` (ascending timestamp index for LRU queries)
-- **Preferences**: Small UI preferences (e.g. `ytsnip_capture_mode`) persist via `chrome.storage.local`.
+- **Preferences**: Small UI preferences (e.g. `ytsnip_settings`, `ytsnip_auto_copy_clipboard`, `ytsnip_capture_mode`) persist via `chrome.storage.local`.
 
 ### Storage Optimization & LRU Eviction Policy
 1. **Multi-Video Concurrent Persistence**:
@@ -391,7 +439,7 @@ Slide decks are stored locally in the browser's high-capacity sandboxed IndexedD
 5. **Resilient Video ID Extraction**:
    - `getVideoId()` supports standard query parameters (`?v=`), Shorts/Live/Embed URL patterns (`/shorts/:id`, `/live/:id`, `/embed/:id`), and YouTube player DOM container attributes (`ytd-watch-flexy[video-id]`).
 
-### Data Schema (`SlideDeck`)
+### Data Schema (`SlideDeck` & Settings)
 ```typescript
 interface SlideItem {
   id: string;              // Unique identifier (e.g. "slide_1719830000000_1")
@@ -409,6 +457,18 @@ interface SlideDeckRecord {
   videoTitle: string;      // Video title string
   updatedAt: number;       // Unix timestamp (ms) for LRU sorting
   slides: SlideItem[];     // Array of captured slides
+}
+
+interface ExtensionSettingsRecord {
+  autoCopyClipboard: boolean;       // Automatically copy frame to clipboard upon slide capture (default: false)
+  icons: {
+    snap: boolean;                  // Camera / Snap slide button (default: true)
+    clipboard: boolean;             // Copy frame to clipboard button (default: true)
+    scan: boolean;                  // Auto-scan slides button (default: true)
+    deck: boolean;                  // Slide deck drawer button (default: true)
+  };
+  captureMode?: 'final_only' | 'all_steps'; // Default scan capture mode (default: 'final_only')
+  sensitivity?: 'low' | 'medium' | 'high';  // Default scan sensitivity (default: 'medium')
 }
 ```
 
