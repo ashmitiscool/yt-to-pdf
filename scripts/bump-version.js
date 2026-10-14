@@ -108,6 +108,7 @@ function bumpVersion(versionInput, options = {}) {
     if (data.packages && data.packages['']) {
       data.packages[''].version = nextVersion;
       if (data.packages[''].name === 'yt-to-ppt') data.packages[''].name = 'yt-to-pdf';
+      data.packages[''].license = 'UNLICENSED';
     }
   });
   if (lockUpdated) console.log(`  ✔ Updated package-lock.json -> ${nextVersion}`);

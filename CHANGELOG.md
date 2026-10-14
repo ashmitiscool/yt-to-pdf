@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] - 2026-10-14
+
+### Added
+- **Dedicated Extension Settings & Options UI (`src/options/`)**:
+  - Introduced a full-page options interface (`options.html`, `options.css`, `options.js`) configured via `"options_ui"` with a dark theme aligned with YouTube's interface.
+  - Added direct settings shortcuts to both the in-player slide deck drawer header and the extension toolbar popup.
+- **Customizable In-Player Action Buttons**:
+  - Configurable toggle controls allowing users to selectively show or hide individual player overlay buttons (*Snap Slide*, *Copy Frame to Clipboard*, *Auto-Scan Slides*, and *Slide Deck Drawer*).
+  - Implemented live reactive DOM updates via `chrome.storage.onChanged` so preference changes take effect immediately across all active YouTube tabs without refreshing.
+- **Auto-Copy Slide Frame to Clipboard**:
+  - Added option to automatically copy high-resolution slide images directly to the system clipboard upon manual capture or snapshot.
+- **Configurable Scanner Defaults & Sensitivity**:
+  - Added preferences to configure default scan mode (*Final Slides Only* vs. *All Step Transitions*) and detection sensitivity levels, automatically pre-filling the scanner state on new sessions.
+- **Options Test Suite**:
+  - Added comprehensive unit test coverage (`tests/options.test.js`) verifying default settings fallback, legacy key migration, partial icon definitions, and storage change listeners.
+
+### Changed
+- **IPC Message Routing**: Added background service worker support for `OPEN_OPTIONS` messages enabling content scripts to trigger `chrome.runtime.openOptionsPage()`.
+
+---
+
 ## [1.1.1] - 2026-10-08
 
 ### Fixed
