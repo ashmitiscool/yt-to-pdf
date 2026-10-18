@@ -112,6 +112,11 @@ yt_to_ppt/
 ├── AGENTS.md                      # Workspace agent guidelines & architecture sync rules
 ├── LICENSE                        # Proprietary license terms
 │
+├── .agents/                       # Agent workflows & specialized skills
+│   └── skills/
+│       ├── chrome-store-compliance/ # CWS policy verification skill
+│       └── graphify-architecture-lookup/ # Codebase graph query & architecture failsafe skill
+│
 ├── docs/                          # In-depth technical guides & store references
 │   ├── autoscan-modes-and-sensitivity-guide.md # Comprehensive guide on auto-scan modes & sensitivity combinations
 │   ├── detector-engine.md         # Difference hashing & slide transition detection reference
