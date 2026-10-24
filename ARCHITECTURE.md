@@ -12,7 +12,7 @@ Welcome to the developer and architecture documentation for **YT to PDF**. This 
    - [Content Script Orchestrator (`src/content/content.js`)](#content-script-orchestrator-srccontentcontentjs)
    - [Difference Hashing & Detection Engine (`src/content/detector.js`)](#difference-hashing--detection-engine-srccontentdetectorjs)
    - [Automated Video Scanner (`src/content/scanner.js`)](#automated-video-scanner-srccontentscannerjs)
-   - [Interactive Slide Deck Drawer (`src/content/drawer.js`)](#interactive-slide-deck-drawer-srccontentdrawerjs)
+   - [Interactive Slide Deck Drawer (`src/content/drawer.js` & `src/content/drawer/`)](#interactive-slide-deck-drawer-srccontentdrawerjs--srccontentdrawer)
    - [Document & Slide Exporter (`src/content/exporter.js`)](#document--slide-exporter-srccontentexporterjs)
    - [Toolbar Action Popup (`src/popup/`)](#toolbar-action-popup-srcpopup)
    - [Background Service Worker (`src/background/`)](#background-service-worker-srcbackground)
@@ -51,7 +51,7 @@ graph TD
             CS["Content Orchestrator: src/content/content.js"]
             DET["Detector Engine: src/content/detector.js"]
             SCN["Scanner Engine: src/content/scanner.js"]
-            DRW["Slide Drawer UI: src/content/drawer.js"]
+            DRW["Slide Drawer UI: src/content/drawer.js & drawer/"]
             EXP["Exporter Engine: src/content/exporter.js"]
             CSS["Styles: src/styles/injected.css"]
             
@@ -157,7 +157,12 @@ yt_to_ppt/
 │   ├── content/                   # Content scripts injected into YouTube watch pages
 │   │   ├── content.js             # Content script entry point, DOM observer & event coordinator
 │   │   ├── detector.js            # Difference hashing (dHash) & slide transition detection engine
-│   │   ├── drawer.js              # In-page Slide Deck drawer UI & deck manager
+│   │   ├── drawer/                # Modular subcomponents of Slide Deck Drawer
+│   │   │   ├── card.js            # Slide card DOM renderer, drag-and-drop & actions
+│   │   │   ├── icons.js           # SVG icon definitions for drawer and preview controls
+│   │   │   ├── lightbox.js        # Full-screen continuous zoomable slide deck preview modal
+│   │   │   └── storage.js         # IndexedDB deck persistence engine with LRU cache & fallback
+│   │   ├── drawer.js              # Slide Deck drawer UI orchestrator & state coordinator
 │   │   ├── exporter.js            # Multi-format export pipeline (PPTX, PDF, ZIP, Print)
 │   │   └── scanner.js             # Automated frame seeker, scanner state machine & grabber
 │   │
@@ -220,8 +225,13 @@ yt_to_ppt/
     - `'all_steps'`: Captures each intermediate animation or bullet step as a separate slide entry.
   - **Progress Emitter**: Dispatches real-time percentage and slide count updates to the drawer UI and popup.
 
-### Interactive Slide Deck Drawer (`src/content/drawer.js`)
-- **Role**: Rich, embedded UI allowing users to curate slides without leaving YouTube.
+### Interactive Slide Deck Drawer (`src/content/drawer.js` & `src/content/drawer/`)
+- **Role**: Rich, embedded UI allowing users to curate slides without leaving YouTube, organized into modular subcomponents:
+  - **`src/content/drawer.js` (Orchestrator)**: Coordinates drawer DOM shell, options ribbon, scan banner, footer action bar, toast feedback system, slide collection state, and export pipeline.
+  - **`src/content/drawer/storage.js` (`DeckStorage`)**: High-capacity IndexedDB engine (`YTSnipDB`) supporting LRU pruning (up to 15 concurrent video decks) and fallback to `chrome.storage.local`.
+  - **`src/content/drawer/lightbox.js` (`SlideLightbox`)**: Google Drive / PDF Viewer style full-screen slide deck preview with continuous scrolling, floating toolbar, zoom controls, touch pinch gestures, requestAnimationFrame scroll-tracking, and keyboard navigation.
+  - **`src/content/drawer/card.js` (`createSlideCard`)**: Individual thumbnail card DOM generator with drag-and-drop reordering, export selection toggling, and action buttons.
+  - **`src/content/drawer/icons.js` (`ICONS`)**: Centralized SVG icon asset dictionary.
 - **Features**:
   - **Card Grid Layout**: Visual gallery of all extracted slides displaying timestamps, slide index, selection checkbox toggles, and action buttons.
   - **In-Place Live Card Updating (`updateSlide`)**: Replaces the active slide thumbnail, timestamp, and metadata in-place during incremental updates without resetting scroll position or re-rendering the entire grid.

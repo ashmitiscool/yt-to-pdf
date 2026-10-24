@@ -24,6 +24,10 @@
         "src/content/detector.js",
         "src/content/scanner.js",
         "src/content/exporter.js",
+        "src/content/drawer/icons.js",
+        "src/content/drawer/storage.js",
+        "src/content/drawer/lightbox.js",
+        "src/content/drawer/card.js",
         "src/content/drawer.js",
         "src/content/content.js"
       ],
