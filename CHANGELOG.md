@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.1] - 2026-10-24
+
+### Refactored
+- **Modularized Slide Deck Drawer Subsystems (`src/content/drawer/`)**:
+  - Decomposed the monolithic 1,417-line `src/content/drawer.js` into focused, single-responsibility modules:
+    - **`icons.js`**: Centralized SVG icon definitions for player, drawer, and lightbox controls.
+    - **`storage.js`**: Isolated `DeckStorage` IndexedDB engine (`YTSnipDB`) with LRU cache eviction (up to 15 concurrent video decks) and fallback to `chrome.storage.local`.
+    - **`lightbox.js`**: Modularized `SlideLightbox` full-screen continuous zoom viewer with floating toolbar, touch pinch gestures, RAF-driven scroll tracking, and scroll isolation.
+    - **`card.js`**: Dedicated `createSlideCard` renderer for thumbnail card generation, selection toggles, drag-and-drop reordering, and action buttons (jump, duplicate, copy, delete).
+    - **`drawer.js`**: Streamlined orchestrator managing drawer shell DOM, options ribbon, scan banner, toast feedback, and export dispatching (reduced from 1,417 lines to 665 lines).
+- **Dual-Environment Module Architecture**:
+  - Implemented universal export patterns supporting both CommonJS (`require`) for the Node.js test suite and global namespace attachment for the browser content script context.
+  - Maintained complete backward compatibility for external consumers and test suites (`SlideDrawer.DeckStorage`, `_showLightbox`).
+
+### Maintenance
+- **Manifest & Extension Packaging**:
+  - Updated `manifest.json` under `content_scripts` to load drawer submodules in strict dependency order.
+  - Verified extension distribution packaging and Chrome Web Store compliance.
+- **Architecture Documentation Sync**:
+  - Updated `ARCHITECTURE.md` file tree, component diagrams, and module responsibility sections in compliance with project architecture sync rules.
+
+---
+
 ## [1.2.0] - 2026-10-14
 
 ### Added
